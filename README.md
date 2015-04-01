@@ -29,7 +29,7 @@ var map = mapmap(document.getElementById('mapEl'))
 	.on('click', mapmap.zoom());
 ```
 
-(https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
+![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
 
 ## Using mapmap.js
 
