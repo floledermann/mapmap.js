@@ -29,6 +29,8 @@ var map = mapmap(document.getElementById('mapEl'))
 	.on('click', mapmap.zoom());
 ```
 
+(https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
+
 ## Using mapmap.js
 
 To use mapmap.js in the browser, download mapmap.js and include it in a script tag.
