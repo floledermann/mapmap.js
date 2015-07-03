@@ -154,6 +154,7 @@ var mapmap = function(element, options) {
 };
 
 // expose datadata library in case we are bundled for browser
+// this is a hack as browserify doesn't support mutliple global exports
 mapmap.datadata = datadata;
 
 mapmap.prototype = {
