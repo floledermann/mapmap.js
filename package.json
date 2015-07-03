@@ -1,0 +1,42 @@
+{
+  "name": "mapmap",
+  "description": "Library for creating maps based on SVG and D3.js in the browser.",
+  "version": "0.2.0",
+  "author": "Florian Ledermann",
+  "license": "AGPL-3.0",
+  "main": "dist/mapmap",
+  "scripts": {
+    "build": "npm run browserify",
+    "test": "mocha",
+    "browserify-dev": "browserify src/index.js -s mapmap -r datadata -o mapmap.js",
+    "xbrowserify-production": "browserify src/index.js -s mapmap --debug -p [minifyify --output mapmap.min.map.json] -o mapmap.min.js",
+    "browserify-production": "browserify src/index.js -s mapmap -r datadata | uglifyjs > mapmap.min.js",
+    "browserify": "npm run browserify-dev && npm run browserify-production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://floledermann@bitbucket.org/floledermann/mapmap.git"
+  },
+  "keywords": [
+    "maps",
+    "map",
+    "SVG",
+    "D3.js",
+    "visualization"
+  ],
+  "dependencies": {
+    "d3": "^3.5.5",
+    "jquery": "^2.1.3"
+  },
+  "devDependencies": {
+    "browserify": "^10.2.4",
+    "browserify-versionify": "^1.0.4",
+    "uglify-js": "^2.4.23",
+    "minifyify": "^7.0.2"
+  },
+  "browserify": {
+    "transform": [
+      "browserify-versionify"
+    ]
+  }
+}
