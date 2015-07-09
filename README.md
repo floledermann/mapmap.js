@@ -2,8 +2,6 @@
 
 ***A data-driven API for interactive thematic maps***
 
-*We are currently in the process of licensing the mapmap.js source code under an open source license. This process should hopefully be completed in the next few days - stay tuned...*
-
 mapmap.js is an API to simplify the creation of interactive thematic vector maps in the browser. It simplifies the processes of loading and processing data and geometry, joining data to geometry, and applying symbolization and interaction techniques to the map.
 
 mapmap.js is built on top of [D3](https://github.com/mbostock/d3) and outputs maps in SVG. Support for pluggable renderer modules that would allow creating maps using other technologies (Canvas, WebGL) is currently planned but not yet implemented.
