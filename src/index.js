@@ -14,7 +14,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-var datadata = require('datadata');
+var dd = require('datadata');
 
 var version = '__VERSION__';
 
@@ -51,7 +51,7 @@ var default_settings = {
         'pointer-events': 'none'
     },
     defaultMetadata: {
-        // domain will be determined by data analysis
+        // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
         undefinedValue: 'undefined'
@@ -154,7 +154,7 @@ var mapmap = function(element, options) {
 
     this.selected = null;
     
-    this.layers = new datadata.OrderedHash();
+    this.layers = new dd.OrderedHash();
     //this.identify_func = identify_layer;
     this.identify_func = identify_by_properties();
     
@@ -168,7 +168,7 @@ var mapmap = function(element, options) {
 
 // expose datadata library in case we are bundled for browser
 // this is a hack as browserify doesn't support mutliple global exports
-mapmap.datadata = datadata;
+mapmap.datadata = dd;
 
 mapmap.prototype = {
 	version: version
@@ -371,7 +371,8 @@ var layer_counter = 0;
 mapmap.prototype.geometry = function(spec, options) {
 
     var default_options = {
-        key: 'id'
+        key: 'id',
+        // layers: auto-generated
     };
     
     // key is default option
@@ -410,7 +411,7 @@ mapmap.prototype.geometry = function(spec, options) {
         return this;
     }
 
-    var promise = datadata.load(spec);
+    var promise = dd.load(spec);
 
     // chain to existing geometry promise
     if (this._promise.geometry) {
@@ -809,12 +810,24 @@ mapmap.prototype.then = function(callback) {
     return this;
 };
 
-mapmap.prototype.data = function(spec, map, reduce, key) {
+mapmap.prototype.data = function(spec, keyOrOptions) {
 
     var self = this;
+    var options;
+
+    var default_options = {
+        geometryKey: '__key__' // natural key
+        // map: datdata default
+        // reduce: datdata default
+    };
     
-    key = key || '__key__'; // TODO: natural key
-    
+    if (dd.isString(keyOrOptions)) {
+        options = $.extend({}, default_options, {map: keyOrOptions});
+    }
+    else {
+        options = $.extend({}, default_options, keyOrOptions);
+    }
+        
     if (typeof spec == 'function') {
         this.promise_data().then(function(data){
             // TODO: this is a mess, see above - data
@@ -833,17 +846,17 @@ mapmap.prototype.data = function(spec, map, reduce, key) {
         });
     }
     else {
-        this.promise_data(datadata(spec, map, reduce))
+        this.promise_data(dd(spec, options.map, options.reduce))
         .then(function(data) {
             self._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
-                        var k = d.properties[key];
+                        var k = d.properties[options.geometryKey];
                         if (k) {
                             mapmap.extend(d.properties, data.get(k));
                         }
                         else {
-                            //console.warn("No '" + key + "' value present for " + this + "!");
+                            //console.warn("No '" + geometryKey + "' value present for " + this + "!");
                         }    
                     }
                 });
