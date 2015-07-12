@@ -24,7 +24,7 @@ _assert(d3, "d3.js is required!");
 _assert($, "jQuery is required!");
 
 var default_settings = {
-    language: 'en',
+    locale: 'en',
     legend: true,
     keepAspectRatio: true,
     placeholderClassName: 'placeholder',
@@ -127,7 +127,7 @@ var mapmap = function(element, options) {
  
     // defaults
     this._projection = d3.geo.mercator().scale(1);
- 
+    
     this.initEngine(element);
     this.initEvents(element);
     
@@ -578,7 +578,6 @@ mapmap.prototype.draw = function() {
     var map = this;
     
     var pathGenerator = d3.geo.path().projection(this._projection);
-
 
     if (this._elements.placeholder) {
         this._elements.placeholder.remove();
@@ -1860,7 +1859,8 @@ var d3_locales = {
         days: [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ],
         shortDays: [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ],
         months: [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ],
-        shortMonths: [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ]
+        shortMonths: [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ],
+        rangeLabel: function(a,b) { return (a + " to " + b); }
     },
     'de': {
         decimal: ",",
@@ -1874,21 +1874,32 @@ var d3_locales = {
         days: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
         shortDays: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
         months: ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
-        shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."]
+        shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
+        rangeLabel: function(a,b) { return (a + " bis " + b); }
     }
 };
 
 var optionsListeners = {
     'locale': function(val, old_val) {
-        if (val.substr && d3_locales[val]) {
-            this._locale = d3.locale(d3_locales[val]);
-        }
-        else {
-            this._locale = d3.locale(val);
-        }
+        this.setLocale(val);
         return this;
     }
 };
+
+mapmap.prototype.setLocale = function(lang){
+    var locale;
+    if (dd.isString(lang) && d3_locales[lang]) {
+        locale = d3_locales[lang];
+    }
+    else {
+        locale = lang;
+    }
+    this.locale = d3.locale(locale);
+    // HACK: we cannot extend d3 locale properly
+    this.locale.rangeLabel = locale.rangeLabel;
+    
+    return this;
+}
 
 mapmap.prototype.options = function(spec, value) {
     // get/set indexed property
@@ -1922,7 +1933,7 @@ mapmap.prototype.options = function(spec, value) {
             var a = propertyDeep(old, keys[i]),
                 b = propertyDeep(this.settings, keys[i]);
             if (a !== b) {
-                optionsListeners[keys[i]](b, a);
+                optionsListeners[keys[i]].call(this, b, a);
             }
         }
         
@@ -1950,6 +1961,8 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
     var range = scale.range().slice(0), // clone, we might reverse() later
         labelFormat,
         thresholds;
+        
+    var map = this;
 
     // set up labels and histogram bins according to scale
     if (scale.invertExtent) {
@@ -1962,7 +1975,10 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
             if (isNaN(extent[1])) {
                 return "> " + metadata.format(extent[0]) + " und mehr";
             }
-            return ((i<range.length-1) ? "> " : "") + metadata.format(extent[0]) + " bis " + metadata.format(extent[1]);
+            if (map._locale) {
+                return ((i<range.length-1) ? "> " : "") + map._locale.rangeLabel(metadata.format(extent[0]), metadata.format(extent[1]));
+            }
+            return ((i<range.length-1) ? "> " : "") + metadata.format(extent[0]) + " - " + metadata.format(extent[1]);
         };
     }
     else {
