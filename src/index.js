@@ -1007,7 +1007,7 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
     }
     // support d3 scales out of the box
     var scale = d3.scale[metadata.scale]();
-    scale.domain(metadata.domain).range(metadata.colors)
+    scale.domain(metadata.domain).range(metadata.color || metadata.colors)
     
     return scale;    
 };
