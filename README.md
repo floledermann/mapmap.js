@@ -19,16 +19,16 @@ var map = mapmap(document.getElementById('mapEl'))
     // use the "code" field to map data to geometries' keys
 	.data('unemployment.csv', 'code')  
 	.meta({
-		'unemploym':  {
+		'unemploym': {
+            label: "Unemployment Rate",
             domain: [0,0.15],
-            colors: colorbrewer.YlOrRd[5],
             numberFormat:'%',
-            label: "Unemployment Rate"
+            colors: colorbrewer.YlOrRd[5]
         }
 	})
 	.choropleth('unemploym')
 	.hoverInfo(['name','unemploym'])
-	.on('click', mapmap.zoom());
+	.applyBehaviour(mapmap.zoom());
 ```
 
 ![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
@@ -56,7 +56,7 @@ map.geometry('districts.geojson', 'iso')
 Data from CSV or JSON files can be joined with features specified in 
 GeoJSON even if the structure or field names do not match. Simple joins 
 can be performed by specifying the field names that should be used as 
-primary keys to identify matching entities; more complex tranformations 
+primary keys to identify matching entities; more complex transformations 
 can be accomplished in a modular fashion by providing functions for the 
 [MapReduce](https://github.com/floledermann/mapmap.js/wiki/Programming-Guide#data-processing-with-mapreduce)
 programming model. 
@@ -119,6 +119,8 @@ polyfills.
 
 ## More information 
 
-For more information and the API documentation, please [see the 
-wiki.](https://github.com/floledermann/mapmap.js/wiki) 
+For more information, see the
+[Programming Guide](https://github.com/floledermann/mapmap.js/wiki/Programming-Guide),
+[API Documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation)
+or other pages in the [mapmap wiki](https://github.com/floledermann/mapmap.js/wiki).
 
