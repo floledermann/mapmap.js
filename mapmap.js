@@ -1,9 +1,22 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/*! mapmap.js 0.2.0 © 2014-2015 Florian Ledermann */
+/*! mapmap.js 0.2.0 © 2014-2015 Florian Ledermann 
 
-var datadata = require('datadata');
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-// core
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+var dd = require('datadata');
+
 var version = '0.2.0';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
@@ -39,7 +52,7 @@ var default_settings = {
         'pointer-events': 'none'
     },
     defaultMetadata: {
-        // domain will be determined by data analysis
+        // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
         undefinedValue: 'undefined'
@@ -128,7 +141,6 @@ var default_settings = {
 };
 
 var mapmap = function(element, options) {
-    
     // ensure constructor invocation
     if (!(this instanceof mapmap)) return new mapmap(element, options);
 
@@ -143,7 +155,7 @@ var mapmap = function(element, options) {
 
     this.selected = null;
     
-    this.layers = new datadata.OrderedHash();
+    this.layers = new dd.OrderedHash();
     //this.identify_func = identify_layer;
     this.identify_func = identify_by_properties();
     
@@ -154,6 +166,10 @@ var mapmap = function(element, options) {
     
     return this;    
 };
+
+// expose datadata library in case we are bundled for browser
+// this is a hack as browserify doesn't support mutliple global exports
+mapmap.datadata = dd;
 
 mapmap.prototype = {
 	version: version
@@ -356,7 +372,8 @@ var layer_counter = 0;
 mapmap.prototype.geometry = function(spec, options) {
 
     var default_options = {
-        key: 'id'
+        key: 'id',
+        // layers: auto-generated
     };
     
     // key is default option
@@ -395,7 +412,7 @@ mapmap.prototype.geometry = function(spec, options) {
         return this;
     }
 
-    var promise = datadata.load(spec);
+    var promise = dd.load(spec);
 
     // chain to existing geometry promise
     if (this._promise.geometry) {
@@ -794,12 +811,24 @@ mapmap.prototype.then = function(callback) {
     return this;
 };
 
-mapmap.prototype.data = function(spec, map, reduce, key) {
+mapmap.prototype.data = function(spec, keyOrOptions) {
 
     var self = this;
+    var options;
+
+    var default_options = {
+        geometryKey: '__key__' // natural key
+        // map: datdata default
+        // reduce: datdata default
+    };
     
-    key = key || '__key__'; // TODO: natural key
-    
+    if (dd.isString(keyOrOptions)) {
+        options = $.extend({}, default_options, {map: keyOrOptions});
+    }
+    else {
+        options = $.extend({}, default_options, keyOrOptions);
+    }
+        
     if (typeof spec == 'function') {
         this.promise_data().then(function(data){
             // TODO: this is a mess, see above - data
@@ -818,17 +847,17 @@ mapmap.prototype.data = function(spec, map, reduce, key) {
         });
     }
     else {
-        this.promise_data(datadata(spec, map, reduce))
+        this.promise_data(dd(spec, options.map, options.reduce))
         .then(function(data) {
             self._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
-                        var k = d.properties[key];
+                        var k = d.properties[options.geometryKey];
                         if (k) {
                             mapmap.extend(d.properties, data.get(k));
                         }
                         else {
-                            //console.warn("No '" + key + "' value present for " + this + "!");
+                            //console.warn("No '" + geometryKey + "' value present for " + this + "!");
                         }    
                     }
                 });
@@ -2242,43 +2271,6 @@ var dd = function(spec, map, reduce) {
     }
 }
 
-// type checking
-/**
-Return true if parameter is a string.
-@param {any} val - The value to check.
-*/
-dd.isString = function (val) {
-  return Object.prototype.toString.call(val) == '[object String]';
-}
-/**
-Return true if parameter is a function.
-@param {any} val - The value to check.
-*/
-dd.isFunction = function(obj) {
-    return (typeof obj === 'function');
-}
-/**
-Return true if parameter is an Array.
-@param {any} val - The value to check.
-*/
-dd.isArray = function(obj) {
-    return (obj instanceof Array);
-}
-/**
-Return true if parameter is an Object, but not an Array, String or anything created with a custom constructor.
-@param {any} val - The value to check.
-*/
-dd.isDictionary = function(obj) {
-    return (obj && obj.constructor && obj.constructor === Object);
-}
-/**
-Return true if parameter is undefined.
-@param {any} val - The value to check.
-*/
-dd.isUndefined = function(obj) {
-    return (typeof obj == 'undefined');
-}
-
 // simple load function, returns a promise for data without map/reduce-ing
 // mostly present for legacy reasons
 dd.load = function(spec, key) {
@@ -2325,6 +2317,56 @@ dd.load = function(spec, key) {
         }
     }
 }
+
+
+// Type checking
+/**
+Return true if argument is a string.
+@param {any} val - The value to check.
+*/
+dd.isString = function (val) {
+  return Object.prototype.toString.call(val) == '[object String]';
+}
+/**
+Return true if argument is a function.
+@param {any} val - The value to check.
+*/
+dd.isFunction = function(obj) {
+    return (typeof obj === 'function');
+}
+/**
+Return true if argument is an Array.
+@param {any} val - The value to check.
+*/
+dd.isArray = function(obj) {
+    return (obj instanceof Array);
+}
+/**
+Return true if argument is an Object, but not an Array, String or anything created with a custom constructor.
+@param {any} val - The value to check.
+*/
+dd.isDictionary = function(obj) {
+    return (obj && obj.constructor && obj.constructor === Object);
+}
+/**
+Return true if argument is undefined.
+@param {any} val - The value to check.
+*/
+dd.isUndefined = function(obj) {
+    return (typeof obj == 'undefined');
+}
+
+// Type conversion / utilities
+/**
+If the argument is already an Array, return a copy of the Array.
+Else, return a single-element Array containing the argument.
+*/
+dd.toArray = function(val) {
+    if (!val) return [];
+    // return a copy if aready array, else single-element array
+    return dd.isArray(val) ? val.slice() : [val];
+}
+
 
 /**
 Return an {@link module:datadata.OrderedHash|OrderedHash} object.
@@ -2384,11 +2426,6 @@ dd.OrderedHash = function() {
         },
         unsorted_dict: function() {
             return vals;
-        },
-        geometries: function(){
-            return Object.keys(vals).map(function (k) {
-                return vals[k];
-            });
         }
     };
 };
@@ -2491,14 +2528,9 @@ dd.emit = {
     }
 };
 
-function arrayify(el) {
-    if (!el) return [];
-    // return a copy if aready array, else singel-element array
-    return (el.slice() && el.push && typeof el.push == 'function') ? el.slice() : [el];
-}
 
 function wildcards(spec) {
-    spec = arrayify(spec);
+    spec = dd.toArray(spec);
     for (var i=0; i<spec.length; i++) {
         if (!(spec[i] instanceof RegExp)) {
             spec[i] = new RegExp('^' + spec[i].replace('*','.*').replace('?','.'));
