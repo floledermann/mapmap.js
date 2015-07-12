@@ -1180,6 +1180,36 @@ mapmap.prototype.proportional_circles = function(value, scale) {
     return this;
 };
 
+mapmap.prototype.labeled_points = function(value, scale) {
+    
+    var valueFunc = keyOrCallback(value);
+        
+    this.symbolize(function(el, geom, data) {
+        if (value === null) {
+            this._elements.overlay.select('circle').remove();
+        }
+        else if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
+            var centroid = path.centroid(geom);
+            this._elements.overlay.append('text')
+                .text(valueFunc(geom.properties))
+                .attr({
+                    stroke: '#ffffff',
+                    fill: '#000000',
+                    'font-size': 9,
+                    'paint-order': 'stroke fill',
+                    'alignment-baseline': 'middle',
+                    dx: 7,
+                    dy: 1
+                })
+                .attr({                    
+                    x: centroid[0],
+                    y: centroid[1]
+                });
+        }
+    });
+    return this;
+};
+
 function addOptionalElement(elementName) {
     return function(value) {
         var valueFunc = keyOrCallback(value);
