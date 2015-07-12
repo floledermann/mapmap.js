@@ -120,6 +120,11 @@ var mapmap = function(element, options) {
     //this.identify_func = identify_layer;
     this.identify_func = identify_by_properties();
     
+    this.metadata_specs = [];   
+
+    // convert seletor expression to node
+    element = d3.select(element).node();
+    
     this.initEngine(element);
     this.initEvents(element);
     
@@ -176,6 +181,21 @@ mapmap.prototype.initEngine = function(element) {
         legend: mainEl.append('g').attr('class', 'legend'),
         placeholder: mainEl.select('.' + this.settings.placeholderClassName)
     };
+    
+    // set up width/height
+    this.width = null;
+    this.height = null;
+    
+    if (!this.width) {
+        this.width = parseInt(mainEl.attr('width')) || 800;
+    }
+    if (!this.height) {
+        this.height = parseInt(mainEl.attr('height')) || 400;
+    }
+    var viewBox = mainEl.attr('viewBox');
+    if (!viewBox) {
+        mainEl.attr('viewBox', '0 0 ' + this.width + ' ' + this.height);
+    }
     
     this._elements.defs.append('filter')
         .attr('id', 'shadow-glow')
@@ -334,23 +354,19 @@ mapmap.prototype.geometry = function(spec, options) {
 
     var default_options = {
         key: 'id',
-        // layers: auto-generated
+        // layers: taken from input or auto-generated layer name
     };
     
     // key is default option
-    if (options.toLowerCase) {
+    if (dd.isString(options)) {
         options = {key: options};
     }
 
-    if (!options.layers) {
-        options.layers = 'layer-' + layer_counter++;
-    }
-    
     options = mapmap.extend({}, default_options, options);
 
     var map = this;
     
-    if (typeof spec == 'function') {
+    if (dd.isFunction(spec)) {
         this._promise.geometry.then(function(topo){
             var new_topo = spec(topo);
             if (typeof new_topo.length == 'undefined') {
@@ -563,6 +579,17 @@ mapmap.prototype.draw = function() {
     groupSel.order();
 };
 
+mapmap.prototype.anchorFunction = function(f) {
+    this.anchorF = f;
+    return this;
+};
+
+mapmap.prototype.anchor = function(d) {
+    if (this.anchorF) {
+        return this.anchorF(d);
+    }
+};
+
 mapmap.prototype.size = function() {
     // TODO:
     // our viewBox is set up for an extent of 800x400 units
@@ -570,8 +597,8 @@ mapmap.prototype.size = function() {
 
     // bounds are re-calculate by initEvents on every resize
     return {
-        width: 800, //this.bounds.width,
-        height: 400 //this.bounds.height
+        width: this.width,
+        height: this.height
     };
 };
 
@@ -853,6 +880,9 @@ var MetaData = function(fields, localeProvider) {
         if (!this._format) {
             this._format = this.getFormatter();
         }
+        if ((this.numberFormat && (isNaN(val) || val === undefined || val === null)) || (!this.numberFormat && !val)) {
+            return this.undefinedValue;
+        }
         return this._format(val);
     };
     this.getFormatter = function() {
@@ -873,10 +903,6 @@ var MetaData = function(fields, localeProvider) {
 
 mapmap.prototype.meta = function(metadata){
     var keys = Object.keys(metadata);
-    // lazy initialization
-    if (!this.metadata_specs) {
-        this.metadata_specs = [];
-    }
     for (var i=0; i<keys.length; i++) {
         this.metadata_specs.push(MetaDataSpec(keys[i], metadata[keys[i]]));
     }
@@ -1419,8 +1445,10 @@ mapmap.interactions.zoom = function(options) {
 
         options = mapmap.extend(true, {}, map.settings.zoomOptions, defaults, options);
         
-        r = height / 2.0 * options.ringRadius;
-        r0 = Math.sqrt(width*width + height*height) / 1.5;
+        var size = this.size();
+        
+        r = size.height / 2.0 * options.ringRadius;
+        r0 = Math.sqrt(size.width*size.width + size.height*size.height) / 1.5;
             
         if (!options.center) {
             // zoom to globally set center by default
@@ -1440,7 +1468,7 @@ mapmap.interactions.zoom = function(options) {
             var newring = ring.enter()
                 .append('g')
                 .attr('class','zoomRing')
-                .attr('transform','translate(' + width * options.center[0] + ',' + height * options.center[1] + ')');
+                .attr('transform','translate(' + size.width * options.center[0] + ',' + size.height * options.center[1] + ')');
                        
             newring.append('circle')
                 .attr('class', 'main')
@@ -2156,13 +2184,17 @@ mapmap.prototype._extent = function(geom, options) {
     if (geom.type && geom.type == 'Topology') {
         // we need to merge all named features
         var names = Object.keys(geom.objects);
+        var all = [];
+        for (var i=0; i<names.length; i++) {
+            $.merge(all, topojson.feature(geom, geom.objects[names[i]]).features);
+        }
+        geom = all;
+    }
+    if (dd.isArray(geom)) {
         var all = {
             'type': 'FeatureCollection',
-            'features': []
+            'features': geom
         };
-        for (var i=0; i<names.length; i++) {
-            $.merge(all.features, topojson.feature(geom, geom.objects[names[i]]).features);
-        }
         geom = all;
     }
     
