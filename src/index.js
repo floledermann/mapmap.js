@@ -1422,7 +1422,18 @@ mapmap.prototype.hoverInfo = function(spec, options) {
 
     var DEFAULTS = {
         selection: null,
-        hoverClassName: 'hoverInfo'
+        hoverClassName: 'hoverInfo',
+        hoverStyle: {
+            position: 'absolute',
+            padding: '0.5em 0.7em',
+            'background-color': 'rgba(255,255,255,0.85)'
+        },
+        hoverEnterStyle: {
+            display: 'block'
+        },
+        hoverLeaveStyle: {
+            display: 'none'
+        }
     }
     
     options = mapmap.extend({}, DEFAULTS, options);
@@ -1438,15 +1449,12 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         hoverEl = $('<div class="' + options.hoverClassName + '"></div>');
         this._elements.parent.append(hoverEl);
     }
+    hoverEl.css(options.hoverStyle);
     if (!hoverEl.mapmap_eventHandlerInstalled) {
         hoverEl.on('mouseenter', function() {
-            hoverEl.css({
-                display: 'block'
-            });
+            hoverEl.css(options.hoverEnterStyle);
         }).on('mouseleave', function() {
-            hoverEl.css({
-                display: 'none'
-            });
+            hoverEl.css(options.hoverLeaveStyle);
         });
         hoverEl.mapmap_eventHandlerInstalled = true;
     }
@@ -1454,9 +1462,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     function show(d, point){
         // offsetParent only works for rendered objects, so place object first!
         // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.css({
-            display: 'block'
-        });        
+        hoverEl.css(options.hoverEnterStyle);        
         var offsetEl = hoverEl.offsetParent();
         hoverEl
             .css({
@@ -1467,7 +1473,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
             .html(htmlFunc(d));
     }
     function hide() {
-        hoverEl.css('display','none');
+        hoverEl.css(options.hoverLeaveStyle);
     }
     
     return this.hover(show, hide, options);
