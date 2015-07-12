@@ -1470,12 +1470,17 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     function show(d, point){
         // offsetParent only works for rendered objects, so place object first!
         // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.css(options.hoverEnterStyle);        
-        var offsetEl = hoverEl.offsetParent();
+        hoverEl.css(options.hoverEnterStyle);  
+        
+        var offsetEl = hoverEl.offsetParent(),
+            offsetHeight = offsetEl.outerHeight(false),
+            mainEl = $(this._elements.main.node())
+            bottom = mainEl.position().top + mainEl.outerHeight(true);
+        
         hoverEl
             .css({
-                bottom: (offsetEl.height()- point.y) + 'px',
-                //bottom: point.y + 'px',
+                bottom: (offsetHeight - mainEl.position().top - point.y) + 'px',
+                //top: point.y + 'px',
                 left: point.x + 'px'
             })
             .html(htmlFunc(d));
