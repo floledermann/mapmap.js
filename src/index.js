@@ -54,7 +54,7 @@ var default_settings = {
         // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
-        undefinedValue: 'undefined'
+        undefinedValue: "" //"undefined"
     },
     extentOptions: {
         size: 0.9
@@ -1415,7 +1415,8 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
                 if (prefix) prefix += ": ";
                 var val = meta.format(d[part]);
                 if (val == 'NaN') val = d[part];
-                if (val !== undefined) {
+                // TODO: make option "ignoreUndefined" etc.
+                if (val !== undefined && val !== meta.undefinedValue) {
                     html += pre + prefix + val + post;
                 }
             }
