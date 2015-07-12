@@ -13,22 +13,25 @@ this:
 
 
 ```js
-var map = mapmap(document.getElementById('mapEl'))
+var map = mapmap('#mapEl')
     // use the "iso" attribute as primary key to identify geometries
 	.geometry('admin.topojson', 'iso') 
     // use the "code" field to map data to geometries' keys
-	.data('unemployment.csv', 'code')  
+	.data('population.csv', 'code')  
 	.meta({
-		'unemploym': {
-            label: "Unemployment Rate",
-            domain: [0,0.15],
-            numberFormat:'%',
-            colors: colorbrewer.YlOrRd[5]
+		'population': {
+            label: "District Population",
+            valueLabel: "Population",
+            domain: [0,200000],
+            numberFormat:'0,000',
+            color: colorbrewer.YlOrRd[5]
         }
 	})
-	.choropleth('unemploym')
-	.hoverInfo(['name','unemploym'])
-	.applyBehaviour(mapmap.zoom());
+	.choropleth('population')
+	.hoverInfo(['name','population'])
+	.applyBehaviour(mapmap.interactions.zoom())
+    .legend(mapmap.legend.html())
+;
 ```
 
 ![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
