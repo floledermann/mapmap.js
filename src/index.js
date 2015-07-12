@@ -124,7 +124,10 @@ var mapmap = function(element, options) {
 
     // convert seletor expression to node
     element = d3.select(element).node();
-    
+ 
+    // defaults
+    this._projection = d3.geo.mercator().scale(1);
+ 
     this.initEngine(element);
     this.initEvents(element);
     
@@ -288,7 +291,7 @@ mapmap.prototype.initEngine = function(element) {
         var pos = [event.clientX, event.clientY]
         return {
             position: pos,
-            location: projection.invert(pos),
+            location: map._projection.invert(pos),
             event: event
         }
     };
@@ -343,9 +346,6 @@ mapmap.prototype.initEvents = function(element) {
     resize();
 };
 
-// defaults
-var projection = d3.geo.mercator().scale(1);
-var path = d3.geo.path().projection(projection);
 var domain = [0,1];
 
 var layer_counter = 0;
@@ -576,6 +576,9 @@ mapmap.prototype.draw = function() {
         .data(this.layers.keys(), function(d,i) { return d; });
     
     var map = this;
+    
+    var pathGenerator = d3.geo.path().projection(this._projection);
+
 
     if (this._elements.placeholder) {
         this._elements.placeholder.remove();
@@ -597,7 +600,7 @@ mapmap.prototype.draw = function() {
             geomSel
                 .enter()
                 .append('path')
-                .attr('d', path)
+                .attr('d', pathGenerator)
                 .attr(map.settings.pathAttributes)
                 .each(function(d) {
                     // link data object to its representation
@@ -787,7 +790,7 @@ mapmap.prototype.getOverlayContext = function() {
 };
 
 mapmap.prototype.project = function(point) {
-    return projection(point);
+    return this._projection(point);
 };
 
 
@@ -1155,6 +1158,8 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
 mapmap.prototype.proportional_circles = function(value, scale) {
     
     var valueFunc = keyOrCallback(value);
+
+    var pathGenerator = d3.geo.path().projection(this._projection);    
     
     scale = scale || 20;
     
@@ -1167,7 +1172,7 @@ mapmap.prototype.proportional_circles = function(value, scale) {
             if (typeof scale != 'function') {
                 scale = this.autoSqrtScale(valueFunc).range([0,scale]);
             }
-            var centroid = path.centroid(geom);
+            var centroid = pathGenerator.centroid(geom);
             this._elements.overlay.append('circle')
                 .attr(this.settings.overlayAttributes)
                 .attr({
@@ -1184,12 +1189,14 @@ mapmap.prototype.labeled_points = function(value, scale) {
     
     var valueFunc = keyOrCallback(value);
         
+    var pathGenerator = d3.geo.path().projection(this._projection);    
+
     this.symbolize(function(el, geom, data) {
         if (value === null) {
             this._elements.overlay.select('circle').remove();
         }
         else if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
-            var centroid = path.centroid(geom);
+            var centroid = pathGenerator.centroid(geom);
             this._elements.overlay.append('text')
                 .text(valueFunc(geom.properties))
                 .attr({
@@ -1282,6 +1289,7 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
     pt.x -= mapBounds.left;
     pt.y -= mapBounds.top;
 
+    console.log(pt.x + ":" + pt.y);
     return pt;
 }
 
@@ -1733,9 +1741,11 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
         bounds = [[Infinity,Infinity],[-Infinity, -Infinity]];
     
     options = mapmap.extend({}, this.settings.zoomOptions, options);
-        
+
+    var pathGenerator = d3.geo.path().projection(this._projection);    
+    
     sel.each(function(el){
-        var b = path.bounds(el);
+        var b = pathGenerator.bounds(el);
         bounds[0][0] = Math.min(bounds[0][0], b[0][0]);
         bounds[0][1] = Math.min(bounds[0][1], b[0][1]);
         bounds[1][0] = Math.max(bounds[1][0], b[1][0]);
@@ -2217,6 +2227,11 @@ mapmap.legend.svg = function(range, labelFormat, histogram, options) {
         .text(labelFormat);
 }
 
+mapmap.prototype.projection = function(projection) {
+    this._projection = projection;
+    return this;
+}
+
 mapmap.prototype.extent = function(selection, options) {
 
     var map = this;
@@ -2264,22 +2279,23 @@ mapmap.prototype._extent = function(geom, options) {
     }
     
     // reset scale to be able to calculate extents of geometry
-    projection.scale(1);
-    var bounds = path.bounds(geom);
+    this._projection.scale(1);
+    var pathGenerator = d3.geo.path().projection(this._projection);
+    var bounds = pathGenerator.bounds(geom);
     var geo_bounds = d3.geo.bounds(geom);
     var fac_x = 1 - Math.abs(0.5 - center.x) * 2,
         fac_y = 1 - Math.abs(0.5 - center.y) * 2;
     var size = this.size();
     var scale = options.size / Math.max((bounds[1][0] - bounds[0][0]) / size.width / fac_x, (bounds[1][1] - bounds[0][1]) / size.height / fac_y);
     
-    projection
+    this._projection
         .scale(scale)
         .center([(geo_bounds[0][0] + geo_bounds[1][0]) / 2, (geo_bounds[0][1] + geo_bounds[1][1]) / 2])
         .translate([size.width / 2, size.height / 2]);  
     
     // apply new projection to existing paths
     this._elements.map.selectAll("path")
-        .attr("d", path);        
+        .attr("d", pathGenerator);        
     
 };
 
