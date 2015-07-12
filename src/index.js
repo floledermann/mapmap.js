@@ -1289,7 +1289,6 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
     pt.x -= mapBounds.left;
     pt.y -= mapBounds.top;
 
-    console.log(pt.x + ":" + pt.y);
     return pt;
 }
 
