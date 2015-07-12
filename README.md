@@ -38,7 +38,7 @@ var map = mapmap('#mapEl')
 
 ## Highlights
 
-#### Transparent Asynchronous Resource Loading
+#### Transparent asynchronous resource loading
 
 mapmap.js handles the loading of geometry and data internally and 
 exposes a pseudo-synchronous API for primary functionality that ensures 
@@ -54,7 +54,7 @@ map.geometry('districts.geojson', 'iso')
    .on('click', mapmap.zoom());
 ```
 
-#### Data Joining and Processing
+#### Data joining and processing
 
 Data from CSV or JSON files can be joined with features specified in 
 GeoJSON even if the structure or field names do not match. Simple joins 
@@ -73,7 +73,7 @@ map.geometry('districts.geojson', 'iso')
 ```
 
 
-#### Metadata Specification
+#### Metadata specification
 
 Metadata descriptors can be used to define the properties of your data 
 and in many cases help create decent human readable output. 
@@ -88,7 +88,7 @@ map.geometry('districts.geojson', 'iso')
             valueLabel: "Population",
             domain: [0,2000000],
             colors: colorbrewer.YlOrRd[5], 
-            numberFormat: ',d' // integer with thousands separator
+            numberFormat: '0,000d' // integer with thousands separator
         }
 	})
    .choropleth('pop_count');
