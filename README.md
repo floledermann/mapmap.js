@@ -65,11 +65,34 @@ can be accomplished in a modular fashion by providing functions for the
 programming model. 
 
 ```js
-// Join geometry identified by the key 'iso' with
+// Simple use case: Join geometry identified by the property 'iso' with
 // data from a CSV where the key field is called 'code'
 map.geometry('districts.geojson', 'iso')
    .data('population.csv', 'code')
    .choropleth('pop_count');
+```
+
+```js
+// Flexible use case: Process data and/or geometry with MapReduce
+map.geometry('districts.geojson', 'iso')
+    .data('population.csv', {
+        map: function(d, emit) {
+            // only emit units on municipality level
+            if (d.code.length == 5) {
+                emit(d.code.substring(0,3), d);
+            }
+        },
+        reduce: function(key, values, emit) {
+            // sum up population count from municipalities
+            var result = {
+                pop_count: 0
+            };
+            for (var i=0; i<values.length; i++) {
+                result.pop_count += values[i].pop_count;
+            }
+            emit(key, result);
+        }
+    });
 ```
 
 
@@ -118,8 +141,9 @@ in a script tag.
 ``` 
 
 In your HTML code, you need to create an SVG element that is used as the root element of your map.
-You need to set the width and height attributes of the element to specify the aspect ratio and
-abstract resolution of your map - you can use CSS to define the actual dimensions of your map.
+*You need to set the width and height attributes of the element* to specify the aspect ratio and
+abstract resolution of your map - you can use CSS to override these and define the actual dimensions
+of your map.
 
 ```html
 <svg id="mapEl" width="800" height="400"></svg>
