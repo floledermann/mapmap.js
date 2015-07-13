@@ -115,9 +115,21 @@ in a script tag.
 <script src="mapmap.js"></script>
 ``` 
 
-For special file formats like 
-[TopoJSON](https://github.com/mbostock/topojson), you need to 
-include the appropriate libraries. 
+In your HTML code, you need to create an SVG element that is used as the root element of your map.
+You need to set the width and height attributes of the element to specify the aspect ratio and
+abstract resolution of your map - you can use CSS to define the actual dimensions of your map.
+
+```html
+<svg id="mapEl" width="800" height="400"></svg>
+```
+
+In order to correctly position HTML-based information on the map, the SVG element must be
+descendant of a *positioned element*, i.e. an element with `position:` `absolute`, `relative` or `fixed`.
+
+### Optional dependencies
+
+For processing [TopoJSON](https://github.com/mbostock/topojson) geometry, you need to 
+include the appropriate library. 
 
 For production use in older browsers, you may need to load some 
 polyfills. 
