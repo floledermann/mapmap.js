@@ -100,14 +100,10 @@ map.geometry('districts.geojson', 'iso')
 // Flexible use case: Process data and/or geometry with MapReduce
 map.geometry('districts.geojson', 'iso')
     .data('population.csv', {
-        map: function(d, emit) {
-            // only emit units on municipality level
-            if (d.code.length == 5) {
-                emit(d.code.substring(0,3), d);
-            }
+        map: function(d, emit) { // group municipalities by district
+            emit(d.district_code, d);
         },
-        reduce: function(key, values, emit) {
-            // sum up population count from municipalities
+        reduce: function(key, values, emit) { // sum up population count
             var result = {
                 pop_count: 0
             };
@@ -123,7 +119,7 @@ Read more in the [Programming Guide...](https://github.com/floledermann/mapmap.j
 
 ## Using mapmap.js
 
-To use mapmap.js in the browser, you need to load D3.js and jQuery *before* loading mapmap.js.
+To use mapmap.js in the browser, you need to load D3.js and jQuery before loading mapmap.js.
 
 ```html
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
