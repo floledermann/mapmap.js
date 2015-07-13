@@ -152,6 +152,13 @@ of your map.
 In order to correctly position HTML-based information on the map, the SVG element must be
 descendant of a *positioned element*, i.e. an element with `position:` `absolute`, `relative` or `fixed`.
 
+The most simple map you can create will just render some GeoJSON:
+
+```js
+var map = mapmap('#mapEl')
+    .geometry('mygeodata.geojson');
+```
+
 ### Optional dependencies
 
 For processing [TopoJSON](https://github.com/mbostock/topojson) geometry, you need to 
