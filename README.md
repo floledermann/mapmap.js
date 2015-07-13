@@ -27,7 +27,7 @@ var map = mapmap('#mapEl')
 	})
 	.choropleth('population')
 	.hoverInfo(['name','population'])
-	.applyBehaviour(mapmap.interactions.zoom())
+	.applyBehavior(mapmap.behavior.zoom())
     .legend(mapmap.legend.html())
 ;
 ```

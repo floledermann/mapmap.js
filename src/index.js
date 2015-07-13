@@ -1501,9 +1501,10 @@ mapmap.prototype.clear = function() {
     return this;
 };
 
-mapmap.interactions = {};
+// namespace for re-usable behaviours
+mapmap.behavior = {};
 
-mapmap.interactions.zoom = function(options) {
+mapmap.behavior.zoom = function(options) {
 
     var defaults = {
         // event callbacks
