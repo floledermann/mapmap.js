@@ -36,6 +36,8 @@ var map = mapmap('#mapEl')
 
 ## Highlights
 
+![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap-examples.png)
+
 #### Transparent asynchronous resource loading
 
 mapmap.js handles the loading of geometry and data internally and 
