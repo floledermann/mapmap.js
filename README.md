@@ -54,6 +54,30 @@ map.geometry('districts.geojson', 'iso')
    .on('click', mapmap.zoom());
 ```
 
+#### Metadata specification
+
+Metadata descriptors can be used to define the properties of your data 
+and in many cases help create decent human readable output. 
+
+
+```js
+map.geometry('districts.geojson', 'iso')
+	.data('population.csv', 'code')
+	.meta({
+		'pop_count': {
+            label: "Population Count, 2014",
+            valueLabel: "Population",
+            domain: [0,2000000],
+            colors: colorbrewer.YlOrRd[5], 
+            numberFormat: '0,000d' // integer with thousands separator
+        }
+	})
+   .choropleth('pop_count');
+```
+
+(requires [colorbrewer.js](https://github.com/mbostock/d3/tree/master/lib/colorbrewer))
+
+
 #### Data joining and processing
 
 Data from CSV or JSON files can be joined with features specified in 
@@ -94,30 +118,6 @@ map.geometry('districts.geojson', 'iso')
         }
     });
 ```
-
-
-#### Metadata specification
-
-Metadata descriptors can be used to define the properties of your data 
-and in many cases help create decent human readable output. 
-
-
-```js
-map.geometry('districts.geojson', 'iso')
-	.data('population.csv', 'code')
-	.meta({
-		'pop_count': {
-            label: "Population Count, 2014",
-            valueLabel: "Population",
-            domain: [0,2000000],
-            colors: colorbrewer.YlOrRd[5], 
-            numberFormat: '0,000d' // integer with thousands separator
-        }
-	})
-   .choropleth('pop_count');
-```
-
-(requires [colorbrewer.js](https://github.com/mbostock/d3/tree/master/lib/colorbrewer))
 
 Read more in the [Programming Guide...](https://github.com/floledermann/mapmap.js/wiki/Programming-Guide)
 
