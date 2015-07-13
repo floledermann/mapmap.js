@@ -14,10 +14,8 @@ this:
 
 ```js
 var map = mapmap('#mapEl')
-    // use the "iso" attribute as primary key to identify geometries
-	.geometry('admin.topojson', 'iso') 
-    // use the "code" field to map data to geometries' keys
-	.data('population.csv', 'code')  
+	.geometry('admin.topojson', 'iso') // "iso" is primary key
+	.data('population.csv', 'code')    // "code" matches primary key
 	.meta({
 		'population': {
             label: "District Population",
