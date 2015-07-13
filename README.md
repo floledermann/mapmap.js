@@ -98,21 +98,25 @@ Read more in the [Programming Guide...](https://github.com/floledermann/mapmap.j
 
 ## Using mapmap.js
 
-To use mapmap.js in the browser, download mapmap.js and include it in a script tag.
-
-```html
-<script src="mapmap.js"></script>
-``` 
-
-Furthermore, you will need to load D3.js and jQuery *before* loading mapmap.js.
+To use mapmap.js in the browser, you need to load D3.js and jQuery *before* loading mapmap.js.
 
 ```html
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 ``` 
 
+Then include your downloaded copy of
+[mapmap.js](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.js) 
+or
+[mapmap.min.js](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.min.js) 
+in a script tag.
+
+```html
+<script src="mapmap.js"></script>
+``` 
+
 For special file formats like 
-[TopoJSON](https://github.com/mbostock/topojson), you may need to 
+[TopoJSON](https://github.com/mbostock/topojson), you need to 
 include the appropriate libraries. 
 
 For production use in older browsers, you may need to load some 
