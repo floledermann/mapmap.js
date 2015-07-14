@@ -9,7 +9,6 @@
     "build": "npm run browserify",
     "test": "mocha",
     "browserify-dev": "browserify src/index.js -s mapmap -r datadata -o mapmap.js",
-    "xbrowserify-production": "browserify src/index.js -s mapmap --debug -p [minifyify --output mapmap.min.map.json] -o mapmap.min.js",
     "browserify-production": "browserify src/index.js -s mapmap -r datadata | uglifyjs > mapmap.min.js",
     "browserify": "npm run browserify-dev && npm run browserify-production"
   },
