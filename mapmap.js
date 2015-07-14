@@ -55,48 +55,10 @@ var default_settings = {
         // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
-        undefinedValue: 'undefined'
-    },
-    legendOptions: {
-        cellSpacing: 5,
-        layout: 'vertical',
-        histogram: false,
-        histogramLength: 80,
-        containerAttributes: {
-            transform: 'translate(20,10)'
-        },
-        backgroundAttributes: {
-            fill: '#fff',
-            'fill-opacity': 0.9,
-            x: -10,
-            y: -10,
-            width: 220
-        },
-        cellAttributes: {
-        },
-        colorAttributes: {
-            'width': 40,
-            'height': 18,
-            'stroke': '#000',
-            'stroke-width': '0.5px',
-            'fill': '#fff'  // this will be used before first transition
-        },
-        textAttributes: {
-            'font-size': 10,
-            'pointer-events': 'none',
-            dy: 12
-        },
-        histogramBarAttributes: {
-            width: 0,
-            x: 140,
-            y: 4,
-            height: 10,
-            fill: '#000',
-            'fill-opacity': 0.2
-        }
+        undefinedValue: "" //"undefined"
     },
     extentOptions: {
-        size: 0.95
+        size: 0.9
     },
     zoomOptions: {
         event: 'click',
