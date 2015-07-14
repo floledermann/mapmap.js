@@ -1184,17 +1184,29 @@ mapmap.prototype.proportional_circles = function(value, scale) {
     return this;
 };
 
-mapmap.prototype.labeled_points = function(value, scale) {
-    
-    var valueFunc = keyOrCallback(value);
-        
-    var pathGenerator = d3.geo.path().projection(this._projection);    
+mapmap.symbolize = {};
 
-    this.symbolize(function(el, geom, data) {
-        if (value === null) {
-            this._elements.overlay.select('circle').remove();
+mapmap.symbolize.addLabel = function(spec) {
+
+    var valueFunc = keyOrCallback(spec);
+        
+    var pathGenerator = d3.geo.path();    
+
+    return function(el, geom, data) {
+        // lazy initialization of projection
+        // we dont't have access to the map above, and also projection
+        // may not have been initialized correctly
+        if (pathGenerator.projection() !== this._projection) {
+            pathGenerator.projection(this._projection);
         }
-        else if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
+
+        // TODO: how to properly remove symbolizations?
+        if (spec === null) {
+            this._elements.overlay.select('circle').remove();
+            return;
+        }
+        
+        if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
             var centroid = pathGenerator.centroid(geom);
             this._elements.overlay.append('text')
                 .text(valueFunc(geom.properties))
@@ -1210,11 +1222,11 @@ mapmap.prototype.labeled_points = function(value, scale) {
                 .attr({                    
                     x: centroid[0],
                     y: centroid[1]
-                });
+                })
+            ;
         }
-    });
-    return this;
-};
+    }
+}
 
 function addOptionalElement(elementName) {
     return function(value) {
