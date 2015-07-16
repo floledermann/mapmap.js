@@ -37,6 +37,7 @@ var map = mapmap('#mapEl')
 ## Highlights
 
 ![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap-examples.png)
+*Some examples created with mapmap.js*
 
 #### Transparent asynchronous resource loading
 
