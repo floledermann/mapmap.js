@@ -8,8 +8,8 @@
   "scripts": {
     "build": "npm run browserify",
     "test": "mocha",
-    "browserify-dev": "browserify src/index.js -s mapmap -r datadata -o mapmap.js",
-    "browserify-production": "browserify src/index.js -s mapmap -r datadata | uglifyjs > mapmap.min.js",
+    "browserify-dev": "browserify src/index.js -s mapmap -o mapmap.js",
+    "browserify-production": "browserify src/index.js -s mapmap | uglifyjs > mapmap.min.js",
     "browserify": "npm run browserify-dev && npm run browserify-production",
     "version": "npm run build"
   },
