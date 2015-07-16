@@ -170,4 +170,6 @@ For more information, see the
 [API Documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation)
 or other pages in the [mapmap wiki](https://github.com/floledermann/mapmap.js/wiki).
 
+Some examples are provided in a [separate repository](https://github.com/floledermann/mapmap-examples).
+
 If you have questions or suggestions for improvements, contact me on [Twitter](http://twitter.com/floledermann) or by [Email](mailto:florian.ledermann@tuwien.ac.at).
