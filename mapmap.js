@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 'use strict';
 
 // test whether in a browser environment
-// http://stackoverflow.com/a/11918368/171579
-if (typeof module !== 'undefined' && this.module !== module) {
+http://stackoverflow.com/a/4224668/171579
+if (typeof window === 'undefined') {
     // node
     var d3dsv = require('d3-dsv');
     var fs = require('fs');
@@ -45,11 +45,13 @@ if (typeof module !== 'undefined' && this.module !== module) {
         tsv: fileparser(d3dsv.tsv.parse),
         json: fileparser(JSON.parse)
     }
-}
-else {
+
+} else {
     // browser
     // we expect global d3 to be available
+    var d3 = window.d3;
 }
+
 
 function rowFileHandler(loader) {
     // TODO: file handler API should not need to be passed map, reduce functions but be wrapped externally
@@ -173,7 +175,7 @@ var dd = function(spec, map, reduce, options) {
 dd.registerFileHandler = registerFileHandler;
 
 // simple load function, returns a promise for data without map/reduce-ing
-// mostly present for legacy reasons
+// DO NOT USE - present only for legacy reasons
 dd.load = function(spec, key) {
     if (spec.then && typeof spec.then === 'function') {
         // already a thenable / promise
@@ -631,7 +633,7 @@ dd.reverse = function(data) {
 module.exports = dd;
 
 },{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
-/*! mapmap.js 0.2.3-pre1 © 2014-2015 Florian Ledermann 
+/*! mapmap.js 0.2.3-pre2 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -649,7 +651,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var dd = require('datadata');
 
-var version = '0.2.3-pre1';
+var version = '0.2.3-pre2';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
