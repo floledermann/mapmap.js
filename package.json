@@ -26,7 +26,7 @@
     "visualization"
   ],
   "dependencies": {
-    "datadata": "^0.1.1",
+    "datadata": "^0.1.5",
     "d3": "^3.5.5"
   },
   "devDependencies": {
