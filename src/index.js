@@ -1895,7 +1895,7 @@ var d3_locales = {
         shortDays: [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ],
         months: [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ],
         shortMonths: [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ],
-        rangeLabel: function(a,b) { return (a + " to " + b); }
+        rangeLabel: defaultRangeLabel
     },
     'de': {
         decimal: ",",
@@ -1910,7 +1910,17 @@ var d3_locales = {
         shortDays: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
         months: ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
         shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
-        rangeLabel: function(a,b) { return (a + " bis " + b); }
+        rangeLabel: function(a, b, format, excludeLower) {
+            format = format || function(a){return a};
+            var lower = excludeLower ? '> ' : '';
+            if (isNaN(a) && !isNaN(b)) {
+                return "bis zu " + format(b);
+            }
+            if (isNaN(b) && !isNaN(a)) {
+                return lower + format(a) + " und mehr";
+            }
+            return (lower + format(a) + " bis " + format(b));
+        }
     }
 };
 
@@ -2004,16 +2014,10 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         // for quantization scales we have invertExtent to fully specify bins
         labelFormat = function(d,i) {
             var extent = scale.invertExtent(d);
-            if (isNaN(extent[0])) {
-                return "unter " + metadata.format(extent[1]);
+            if (map.locale && map.locale.rangeLabel) {
+                return map.locale.rangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
             }
-            if (isNaN(extent[1])) {
-                return "> " + metadata.format(extent[0]) + " und mehr";
-            }
-            if (map._locale) {
-                return ((i<range.length-1) ? "> " : "") + map._locale.rangeLabel(metadata.format(extent[0]), metadata.format(extent[1]));
-            }
-            return ((i<range.length-1) ? "> " : "") + metadata.format(extent[0]) + " - " + metadata.format(extent[1]);
+            return defaultRangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
         };
     }
     else {
@@ -2104,7 +2108,7 @@ mapmap.legend.html = function(options) {
         
         // TODO: value may be a function, so we cannot easily generate a label for it
         var title = legend.selectAll('h3')
-            .data([valueOrCall(metadata.label, value) || '']);
+            .data([valueOrCall(metadata.label, value) || (dd.isString(value) ? value : '')]);
             
         title.enter()
             .append('h3');
