@@ -1316,7 +1316,6 @@ mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
     }
 }
 
-var oldPointerEvents = [];
 
 mapmap.prototype.hover = function(overCB, outCB, options) {
 
@@ -1331,6 +1330,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
     options = mapmap.extend({}, DEFAULTS, options);
     
     var map = this;
+    
+    if (!this._oldPointerEvents) {
+        this._oldPointerEvents = [];
+    }
     
     this.promise_data().then(function() {
         var obj = map.getRepresentations(options.selection);
@@ -1349,11 +1352,11 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             overCB.call(map, d.properties, anchor, this);           
         };
         // reset previously overridden pointer events
-        for (var i=0; i<oldPointerEvents.length; i++) {
-            var pair = oldPointerEvents[i];
+        for (var i=0; i<map._oldPointerEvents.length; i++) {
+            var pair = map._oldPointerEvents[i];
             pair[0].style('pointer-events', pair[1]);
         }
-        oldPointerEvents = [];
+        map._oldPointerEvents = [];
         if (overCB) {
             obj
                 .on('mouseover', mouseover)
@@ -1364,7 +1367,7 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
                     // selectors (e.g. .selected-foo .foo) for this...
                     // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/pointer-events
                     var sel = d3.select(this);
-                    oldPointerEvents.push([sel, sel.style('pointer-events')]);
+                    map._oldPointerEvents.push([sel, sel.style('pointer-events')]);
                     // TODO: this should be configurable via options
                     //sel.style('pointer-events','all');
                     sel.style('pointer-events','visiblePainted');
