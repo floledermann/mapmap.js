@@ -164,6 +164,14 @@ include the appropriate library.
 For production use in older browsers, you may need to load some 
 polyfills. 
 
+### Credits
+
+If you use mapmap.js in research and publish a paper about your work, please cite the following publication:
+
+**Ledermann, F.**: mapmap.js: A high-level client-side API for interactive thematic maps. In: M. Brovelli et. al. (Eds.) "FOSS4G Europe Como 2015" Geomatics Workbooks, 12 (2015), ISSN: 1591-092X; p. 581 - 582.
+
+[BibTex Entry](http://publik.tuwien.ac.at/showbibtex.php?ID=239910)
+
 ## More information 
 
 For more information, see the
