@@ -25,7 +25,6 @@ _assert($, "jQuery is required!");
 
 var default_settings = {
     locale: 'en',
-    legend: true,
     keepAspectRatio: true,
     placeholderClassName: 'placeholder',
     pathAttributes: {
@@ -55,49 +54,6 @@ var default_settings = {
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
         undefinedValue: "" //"undefined"
-    },
-    extentOptions: {
-        size: 0.9
-    },
-    zoomOptions: {
-        event: 'click',
-        cursor: 'pointer',
-        fitScale: 0.7,
-        animationDuration: 750,
-        maxZoom: 8,
-        hierarchical: false,
-        showRing: true,
-        ringRadius: 1.1, // relative to height/2
-        ringAttributes: {
-            stroke: '#000',
-            'stroke-width': 6,
-            'stroke-opacity': 0.3,
-            'pointer-events': 'none',
-            fill: 'none',
-            xfilter: 'url(#light-glow)'
-        },
-        closeButton: function(parent) {
-            parent.append('circle')
-                .attr({
-                    r: 10,
-                    fill: '#fff',
-                    stroke: '#000',
-                    'stroke-width': 2.5,
-                    'stroke-opacity': 0.9,
-                    'fill-opacity': 0.9,
-                    cursor: 'pointer'
-                });
-                
-            parent.append('text')
-                .attr({
-                    'text-anchor':'middle',
-                    cursor: 'pointer',
-                    'font-weight': 'bold',
-                    'font-size': '18',
-                    y: 6
-                })
-                .text('×');
-        }
     }
 };
 
@@ -350,19 +306,15 @@ var domain = [0,1];
 
 var layer_counter = 0;
 
-mapmap.prototype.geometry = function(spec, options) {
+mapmap.prototype.geometry = function(spec, keyOrOptions) {
 
-    var default_options = {
+    // key is default option
+    var options = dd.isString(keyOrOptions) ? {key: keyOrOptions} : keyOrOptions;
+
+    options = dd.merge({
         key: 'id',
         // layers: taken from input or auto-generated layer name
-    };
-    
-    // key is default option
-    if (dd.isString(options)) {
-        options = {key: options};
-    }
-
-    options = mapmap.extend({}, default_options, options);
+    }, options);
 
     var map = this;
     
@@ -832,29 +784,23 @@ mapmap.prototype.then = function(callback) {
 
 mapmap.prototype.data = function(spec, keyOrOptions) {
 
-    var self = this;
-    var options;
-
-    var default_options = {
+    var options = dd.isDictionary(keyOrOptions) ? keyOrOptions : {map: keyOrOptions};
+    
+    options = dd.merge({
         geometryKey: '__key__' // natural key
         // map: datdata default
         // reduce: datdata default
-    };
-    
-    if (dd.isString(keyOrOptions)) {
-        options = $.extend({}, default_options, {map: keyOrOptions});
-    }
-    else {
-        options = $.extend({}, default_options, keyOrOptions);
-    }
+    }, options);
         
+    var map = this;
+    
     if (typeof spec == 'function') {
         this.promise_data().then(function(data){
             // TODO: this is a mess, see above - data
             // doesn't contain the actual canonical data, but 
             // only the most recently requested one, which doesn't
             // help us for transformations
-            self._elements.geometry.selectAll('path')
+            map._elements.geometry.selectAll('path')
             .each(function(geom) {
                 if (geom.properties) {
                     var val = spec(geom.properties);
@@ -868,7 +814,7 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
     else {
         this.promise_data(dd(spec, options.map, options.reduce))
         .then(function(data) {
-            self._elements.geometry.selectAll('path')
+            map._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
                         var k = d.properties[options.geometryKey];
@@ -1010,7 +956,7 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
         metadata = this.getMetadata(value);
     }
     else {
-        metadata = $.extend({}, this.settings.defaultMetadata, metadata);
+        metadata = dd.merge(this.settings.defaultMetadata, metadata);
     }
     
     if (!metadata.domain) {
@@ -1277,12 +1223,10 @@ mapmap.showHover = function(el) {
 
 mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40}
-     };
-     
-    options = mapmap.extend({}, DEFAULTS, options);
+    }, options);
 
     var bounds = repr.getBoundingClientRect();
     var pt = this._elements.main.node().createSVGPoint();
@@ -1304,11 +1248,10 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
 }
 
 mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
-    var DEFAULTS = {
-        anchorOffset: [0,-20]
-     };
      
-    options = mapmap.extend({}, DEFAULTS, options);
+    options = dd.merge({
+        anchorOffset: [0,-20]
+     }, options);
 
     return {
         x: event.offsetX + options.anchorOffset[0],
@@ -1319,15 +1262,13 @@ mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
 
 mapmap.prototype.hover = function(overCB, outCB, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         moveToFront: true,
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40},
         selection: null,
         anchorPosition: this.getAnchorForRepr
-     };
-     
-    options = mapmap.extend({}, DEFAULTS, options);
+     }, options);
     
     var map = this;
     
@@ -1442,7 +1383,7 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
 
 mapmap.prototype.hoverInfo = function(spec, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         selection: null,
         hoverClassName: 'hoverInfo',
         hoverStyle: {
@@ -1456,9 +1397,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         hoverLeaveStyle: {
             display: 'none'
         }
-    }
-    
-    options = mapmap.extend({}, DEFAULTS, options);
+    }, options);
     
     var hoverEl = this._elements.parent.find('.' + options.hoverClassName);
 
@@ -1521,12 +1460,48 @@ mapmap.behavior = {};
 
 mapmap.behavior.zoom = function(options) {
 
-    var defaults = {
-        // event callbacks
+    options = dd.merge({
+        event: 'click',
+        cursor: 'pointer',
+        fitScale: 0.7,
+        animationDuration: 750,
+        maxZoom: 8,
+        hierarchical: false,
+        showRing: true,
+        ringRadius: 1.1, // relative to height/2
         zoomstart: null,
-        zoomend: null
-    };
-    
+        zoomend: null,
+        ringAttributes: {
+            stroke: '#000',
+            'stroke-width': 6,
+            'stroke-opacity': 0.3,
+            'pointer-events': 'none',
+            fill: 'none'
+        },
+        closeButton: function(parent) {
+            parent.append('circle')
+                .attr({
+                    r: 10,
+                    fill: '#fff',
+                    stroke: '#000',
+                    'stroke-width': 2.5,
+                    'stroke-opacity': 0.9,
+                    'fill-opacity': 0.9,
+                    cursor: 'pointer'
+                });
+                
+            parent.append('text')
+                .attr({
+                    'text-anchor':'middle',
+                    cursor: 'pointer',
+                    'font-weight': 'bold',
+                    'font-size': '18',
+                    y: 6
+                })
+                .text('×');
+        }
+    }, options);
+        
     var ring = null,
         map = null,
         r, r0,
@@ -1536,8 +1511,6 @@ mapmap.behavior.zoom = function(options) {
             
         map = this;
 
-        options = mapmap.extend(true, {}, map.settings.zoomOptions, defaults, options);
-        
         var size = this.size();
         
         r = size.height / 2.0 * options.ringRadius;
@@ -1695,7 +1668,10 @@ mapmap.behavior.zoom = function(options) {
     return z;
 };
 
-mapmap.prototype.animateView = function(translate, scale, callback) {
+mapmap.prototype.animateView = function(translate, scale, callback, duration) {
+
+    duration = duration || 750;
+    
     if (translate[0] == this.current_translate[0] && translate[1] == this.current_translate[1] && scale == this.current_scale) {
         // nothing to do
         // yield to simulate async callback
@@ -1709,7 +1685,7 @@ mapmap.prototype.animateView = function(translate, scale, callback) {
     callHoverOut();
     var map = this;
     this._elements.map.transition()
-        .duration(this.settings.zoomOptions.animationDuration)
+        .duration(duration)
         .call(map.zoom.translate(translate).scale(scale).event)
         .each('start', function() {
             map._elements.shadowGroup.attr('display','none');
@@ -1757,12 +1733,16 @@ mapmap.prototype.getView = function() {
 };
 
 mapmap.prototype.zoomToSelection = function(selection, options) {
-    var sel = this.getRepresentations(selection),
-        bounds = [[Infinity,Infinity],[-Infinity, -Infinity]];
     
-    options = mapmap.extend({}, this.settings.zoomOptions, options);
+    options = dd.merge({
+        fitScale: 0.7,
+        animationDuration: 750,
+        maxZoom: 8
+    }, options);
 
-    var pathGenerator = d3.geo.path().projection(this._projection);    
+    var sel = this.getRepresentations(selection),
+        bounds = [[Infinity,Infinity],[-Infinity, -Infinity]],
+        pathGenerator = d3.geo.path().projection(this._projection);    
     
     sel.each(function(el){
         var b = pathGenerator.bounds(el);
@@ -1779,11 +1759,11 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
         size = this.size(),
         scale = Math.min(options.maxZoom, options.fitScale / Math.max(dx / size.width, dy / size.height)),
         translate = [size.width * center.x - scale * x, size.height * center.y - scale * y];
-    this.animateView(translate, scale, options.callback);
+    this.animateView(translate, scale, options.callback, options.animationDuration);
     return this;
 };
 
-mapmap.prototype.zoomToBounds = function(bounds, callback) {
+mapmap.prototype.zoomToBounds = function(bounds, callback, duration) {
     var w = bounds[1][0]-bounds[0][0],
         h = bounds[1][1]-bounds[0][1],
         cx = (bounds[1][0]+bounds[0][0]) / 2,
@@ -1792,20 +1772,20 @@ mapmap.prototype.zoomToBounds = function(bounds, callback) {
         scale = Math.min(2, 0.9 / Math.max(w / size.width, h / size.height)),
         translate = [size.width * 0.5 - scale * cx, size.height * 0.5 - scale * cy];
     
-    return this.animateView(translate, scale, callback);
+    return this.animateView(translate, scale, callback, duration);
 };
 
-mapmap.prototype.zoomToCenter = function(center, scale, callback) {
+mapmap.prototype.zoomToCenter = function(center, scale, callback, duration) {
 
     scale = scale || 1;
     
     var size = this.size(),
         translate = [size.width * 0.5 - scale * center[0], size.height * 0.5 - scale * center[1]];
 
-    return this.animateView(translate, scale, callback);
+    return this.animateView(translate, scale, callback, duration);
 };
 
-mapmap.prototype.zoomToViewportPosition = function(center, scale, callback) {
+mapmap.prototype.zoomToViewportPosition = function(center, scale, callback, duration) {
 
     var point = this._elements.main.node().createSVGPoint();
 
@@ -1821,12 +1801,11 @@ mapmap.prototype.zoomToViewportPosition = function(center, scale, callback) {
     
     //var point = [(center[0]-this.current_translate[0])/this.current_scale, (center[1]-this.current_translate[1])/this.current_scale];
     
-    return this.zoomToCenter(point, scale, callback);
-    //return this.animateView(translate, scale, callback);
+    return this.zoomToCenter(point, scale, callback, duration);
 };
 
-mapmap.prototype.resetZoom = function(callback) {
-    return this.animateView([0,0],1, callback);
+mapmap.prototype.resetZoom = function(callback, duration) {
+    return this.animateView([0,0],1, callback, duration);
     // TODO take center into account zoomed-out, we may not always want this?
     //doZoom([width * (center.x-0.5),height * (center.y-0.5)],1);
 };
@@ -2000,8 +1979,6 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         return this;
     }
     
-    var options = mapmap.extend(true, {}, this.settings.legendOptions);
-    
     if (typeof metadata == 'string') {
         metadata = mapmap.getMetadata(metadata);
     }
@@ -2055,7 +2032,7 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
 
     histogram = make_histogram(histogram_objects);
     
-    this.legend_func.call(this, value, metadata, range, labelFormat, histogram, options);
+    this.legend_func.call(this, value, metadata, range, labelFormat, histogram);
                     
     return this;
 
@@ -2098,7 +2075,7 @@ mapmap.legend.html = function(options) {
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(value, metadata, range, labelFormat, histogram, rtOptions) {
+    return function(value, metadata, range, labelFormat, histogram) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2321,7 +2298,9 @@ mapmap.prototype.extent = function(selection, options) {
 
 mapmap.prototype._extent = function(geom, options) {
 
-    options = mapmap.extend(true, {}, this.settings.extentOptions, options);
+    options = dd.merge({
+        fillFactor: 0.9
+    }, options);
     
     // convert/merge topoJSON
     if (geom.type && geom.type == 'Topology') {
@@ -2354,7 +2333,7 @@ mapmap.prototype._extent = function(geom, options) {
         fac_y = 1 - Math.abs(0.5 - center.y) * 2;
         
     var size = this.size();
-    var scale = options.size / Math.max(bounds.width / size.width / fac_x, bounds.height / size.height / fac_y);
+    var scale = options.fillFactor / Math.max(bounds.width / size.width / fac_x, bounds.height / size.height / fac_y);
     
     this._projection
         .scale(scale)
