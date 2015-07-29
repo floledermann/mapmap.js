@@ -2335,19 +2335,23 @@ mapmap.prototype._extent = function(geom, options) {
     }
     
     // reset scale to be able to calculate extents of geometry
-    this._projection.scale(1);
+    this._projection.scale(1).translate([0, 0]);
     var pathGenerator = d3.geo.path().projection(this._projection);
     var bounds = pathGenerator.bounds(geom);
-    var geo_bounds = d3.geo.bounds(geom);
+    // use absolute values, as east does not always have to be right of west!
+    bounds.height = Math.abs(bounds[1][1] - bounds[0][1]);
+    bounds.width = Math.abs(bounds[1][0] - bounds[0][0]);
+    
+    // if we are not centered in midpoint, calculate "padding factor"
     var fac_x = 1 - Math.abs(0.5 - center.x) * 2,
         fac_y = 1 - Math.abs(0.5 - center.y) * 2;
+        
     var size = this.size();
-    var scale = options.size / Math.max((bounds[1][0] - bounds[0][0]) / size.width / fac_x, (bounds[1][1] - bounds[0][1]) / size.height / fac_y);
+    var scale = options.size / Math.max(bounds.width / size.width / fac_x, bounds.height / size.height / fac_y);
     
     this._projection
         .scale(scale)
-        .center([(geo_bounds[0][0] + geo_bounds[1][0]) / 2, (geo_bounds[0][1] + geo_bounds[1][1]) / 2])
-        .translate([size.width / 2, size.height / 2]);  
+        .translate([(size.width - scale * (bounds[1][0] + bounds[0][0]))/ 2, (size.height - scale * (bounds[1][1] + bounds[0][1]))/ 2]);  
     
     // apply new projection to existing paths
     this._elements.map.selectAll("path")
