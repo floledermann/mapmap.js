@@ -1815,8 +1815,6 @@ mapmap.prototype.zoomToViewportPosition = function(center, scale, callback) {
     point = [point.x, point.y];
     
     scale = scale || 1;
-
-    console.log(point);
     
     //var point = [(center[0]-this.current_translate[0])/this.current_scale, (center[1]-this.current_translate[1])/this.current_scale];
     
