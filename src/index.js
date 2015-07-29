@@ -1513,7 +1513,7 @@ mapmap.prototype.clear = function() {
     return this;
 };
 
-// namespace for re-usable behaviours
+// namespace for re-usable behaviors
 mapmap.behavior = {};
 
 mapmap.behavior.zoom = function(options) {
@@ -1576,7 +1576,7 @@ mapmap.behavior.zoom = function(options) {
         }
 
         // this is currently needed if e.g. search zooms to somewhere else,
-        // but map is still zoomed in through this behaviour
+        // but map is still zoomed in through this behavior
         // do a reset(), but without modifying the map view (=zooming out)
         map.on('view', function(translate, scale) {
             if (zoomed && scale == 1) {
@@ -1640,7 +1640,7 @@ mapmap.behavior.zoom = function(options) {
             ring.select('g.zoomOut').transition().duration(options.animationDuration)
                 .attr('transform', 'translate(' + (new_r * 0.707) + ',-' + (new_r * 0.707) + ')'); // sqrt(2) / 2
 
-            // caveat: make sure to assign this every time to apply correct closure if we have multiple zoom behaviours!!
+            // caveat: make sure to assign this every time to apply correct closure if we have multiple zoom behaviors!!
             ring.select('g.zoomOut').on('click', reset);
         }
     }
@@ -1678,11 +1678,11 @@ mapmap.behavior.zoom = function(options) {
                 zoomTo(zoomed);
             }
             */
-            // TODO: make up our mind whether this should remove the other behaviour
+            // TODO: make up our mind whether this should remove the other behavior
             // in burgenland_demographie.html, we need to keep it as it would otherwise zoom out
-            // but if we mix different behaviours, we may want to remove the other one automatically
+            // but if we mix different behaviors, we may want to remove the other one automatically
             // (or maybe require it to be done manually)
-            // in pendeln.js, we remove the other behaviour here, which is inconsistent!
+            // in pendeln.js, we remove the other behavior here, which is inconsistent!
             
             //other.remove();
         }
@@ -1833,7 +1833,7 @@ mapmap.prototype.resetZoom = function(callback) {
 
 // Manipulate representation geometry. This can be used e.g. to register event handlers.
 // spec is a function to be called with selection to set up event handler
-mapmap.prototype.applyBehaviour = function(spec, selection) {
+mapmap.prototype.applyBehavior = function(spec, selection) {
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
@@ -1841,23 +1841,47 @@ mapmap.prototype.applyBehaviour = function(spec, selection) {
             spec.call(map, sel);
         }
         else {
-            throw "Behaviour " + spec + " not a function";
+            throw "Behavior " + spec + " not a function";
         }
     });
     return this;
 };
 
-// apply a behaviour on the whole map pane (e.g. drag/zoom etc.)
-mapmap.prototype.applyMapBehaviour = function(spec) {
+
+// apply a behavior on the whole map pane (e.g. drag/zoom etc.)
+mapmap.prototype.applyMapBehavior = function(spec) {
     spec.call(this, this._elements.map);
     return this;
 };
+
+
+// deprecated methods using UK-spelling
+mapmap.prototype.applyBehaviour = function(spec, selection) {
+    console && console.log && console.log("Deprecation warning: applyBehaviour() is deprecated, use applyBehavior() (US spelling) instead!");
+    return this.applyBehavior(spec, selection);
+}
+mapmap.prototype.applyMapBehaviour = function(spec, selection) {
+    console && console.log && console.log("Deprecation warning: applyMapBehaviour() is deprecated, use applyMapBehavior() (US spelling) instead!");
+    return this.applyMapBehavior(spec, selection);
+}
 
 // handler for high-level events on the map object
 mapmap.prototype.on = function(eventName, handler) {
     this.dispatcher.on(eventName, handler);
     return this;
 };
+
+function defaultRangeLabel(a, b, format, excludeLower) {
+    format = format || function(a){return a};
+    var lower = excludeLower ? '> ' : '';
+    if (isNaN(a) && !isNaN(b)) {
+        return "up to " + format(b);
+    }
+    if (isNaN(b) && !isNaN(a)) {
+        return lower + format(a) + " and above";
+    }
+    return (lower + format(a) + " to " + format(b));
+}
 
 var d3_locales = {
     'en': {
