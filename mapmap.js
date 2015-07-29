@@ -271,9 +271,9 @@ dd.toArray = function(val) {
 }
 
 /**
-Shallow object extension, mainly for options.
+Shallow object merging, mainly for options. Returns a new object.
 */
-dd.extend = function() {
+dd.merge = function() {
     var obj = {};
 
     for (var i = 0; i < arguments.length; i++) {
@@ -633,7 +633,7 @@ dd.reverse = function(data) {
 module.exports = dd;
 
 },{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
-/*! mapmap.js 0.2.3-pre2 © 2014-2015 Florian Ledermann 
+/*! mapmap.js 0.2.3 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -651,7 +651,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var dd = require('datadata');
 
-var version = '0.2.3-pre2';
+var version = '0.2.3';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
@@ -660,7 +660,6 @@ _assert($, "jQuery is required!");
 
 var default_settings = {
     locale: 'en',
-    legend: true,
     keepAspectRatio: true,
     placeholderClassName: 'placeholder',
     pathAttributes: {
@@ -690,49 +689,6 @@ var default_settings = {
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
         undefinedValue: "" //"undefined"
-    },
-    extentOptions: {
-        size: 0.9
-    },
-    zoomOptions: {
-        event: 'click',
-        cursor: 'pointer',
-        fitScale: 0.7,
-        animationDuration: 750,
-        maxZoom: 8,
-        hierarchical: false,
-        showRing: true,
-        ringRadius: 1.1, // relative to height/2
-        ringAttributes: {
-            stroke: '#000',
-            'stroke-width': 6,
-            'stroke-opacity': 0.3,
-            'pointer-events': 'none',
-            fill: 'none',
-            xfilter: 'url(#light-glow)'
-        },
-        closeButton: function(parent) {
-            parent.append('circle')
-                .attr({
-                    r: 10,
-                    fill: '#fff',
-                    stroke: '#000',
-                    'stroke-width': 2.5,
-                    'stroke-opacity': 0.9,
-                    'fill-opacity': 0.9,
-                    cursor: 'pointer'
-                });
-                
-            parent.append('text')
-                .attr({
-                    'text-anchor':'middle',
-                    cursor: 'pointer',
-                    'font-weight': 'bold',
-                    'font-size': '18',
-                    y: 6
-                })
-                .text('×');
-        }
     }
 };
 
@@ -985,19 +941,15 @@ var domain = [0,1];
 
 var layer_counter = 0;
 
-mapmap.prototype.geometry = function(spec, options) {
+mapmap.prototype.geometry = function(spec, keyOrOptions) {
 
-    var default_options = {
+    // key is default option
+    var options = dd.isString(keyOrOptions) ? {key: keyOrOptions} : keyOrOptions;
+
+    options = dd.merge({
         key: 'id',
         // layers: taken from input or auto-generated layer name
-    };
-    
-    // key is default option
-    if (dd.isString(options)) {
-        options = {key: options};
-    }
-
-    options = mapmap.extend({}, default_options, options);
+    }, options);
 
     var map = this;
     
@@ -1467,29 +1419,23 @@ mapmap.prototype.then = function(callback) {
 
 mapmap.prototype.data = function(spec, keyOrOptions) {
 
-    var self = this;
-    var options;
-
-    var default_options = {
+    var options = dd.isDictionary(keyOrOptions) ? keyOrOptions : {map: keyOrOptions};
+    
+    options = dd.merge({
         geometryKey: '__key__' // natural key
         // map: datdata default
         // reduce: datdata default
-    };
-    
-    if (dd.isString(keyOrOptions)) {
-        options = $.extend({}, default_options, {map: keyOrOptions});
-    }
-    else {
-        options = $.extend({}, default_options, keyOrOptions);
-    }
+    }, options);
         
+    var map = this;
+    
     if (typeof spec == 'function') {
         this.promise_data().then(function(data){
             // TODO: this is a mess, see above - data
             // doesn't contain the actual canonical data, but 
             // only the most recently requested one, which doesn't
             // help us for transformations
-            self._elements.geometry.selectAll('path')
+            map._elements.geometry.selectAll('path')
             .each(function(geom) {
                 if (geom.properties) {
                     var val = spec(geom.properties);
@@ -1503,7 +1449,7 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
     else {
         this.promise_data(dd(spec, options.map, options.reduce))
         .then(function(data) {
-            self._elements.geometry.selectAll('path')
+            map._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
                         var k = d.properties[options.geometryKey];
@@ -1645,7 +1591,7 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
         metadata = this.getMetadata(value);
     }
     else {
-        metadata = $.extend({}, this.settings.defaultMetadata, metadata);
+        metadata = dd.merge(this.settings.defaultMetadata, metadata);
     }
     
     if (!metadata.domain) {
@@ -1912,12 +1858,10 @@ mapmap.showHover = function(el) {
 
 mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40}
-     };
-     
-    options = mapmap.extend({}, DEFAULTS, options);
+    }, options);
 
     var bounds = repr.getBoundingClientRect();
     var pt = this._elements.main.node().createSVGPoint();
@@ -1939,11 +1883,10 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
 }
 
 mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
-    var DEFAULTS = {
-        anchorOffset: [0,-20]
-     };
      
-    options = mapmap.extend({}, DEFAULTS, options);
+    options = dd.merge({
+        anchorOffset: [0,-20]
+     }, options);
 
     return {
         x: event.offsetX + options.anchorOffset[0],
@@ -1951,21 +1894,22 @@ mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
     }
 }
 
-var oldPointerEvents = [];
 
 mapmap.prototype.hover = function(overCB, outCB, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         moveToFront: true,
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40},
         selection: null,
         anchorPosition: this.getAnchorForRepr
-     };
-     
-    options = mapmap.extend({}, DEFAULTS, options);
+     }, options);
     
     var map = this;
+    
+    if (!this._oldPointerEvents) {
+        this._oldPointerEvents = [];
+    }
     
     this.promise_data().then(function() {
         var obj = map.getRepresentations(options.selection);
@@ -1984,11 +1928,11 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             overCB.call(map, d.properties, anchor, this);           
         };
         // reset previously overridden pointer events
-        for (var i=0; i<oldPointerEvents.length; i++) {
-            var pair = oldPointerEvents[i];
+        for (var i=0; i<map._oldPointerEvents.length; i++) {
+            var pair = map._oldPointerEvents[i];
             pair[0].style('pointer-events', pair[1]);
         }
-        oldPointerEvents = [];
+        map._oldPointerEvents = [];
         if (overCB) {
             obj
                 .on('mouseover', mouseover)
@@ -1999,7 +1943,7 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
                     // selectors (e.g. .selected-foo .foo) for this...
                     // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/pointer-events
                     var sel = d3.select(this);
-                    oldPointerEvents.push([sel, sel.style('pointer-events')]);
+                    map._oldPointerEvents.push([sel, sel.style('pointer-events')]);
                     // TODO: this should be configurable via options
                     //sel.style('pointer-events','all');
                     sel.style('pointer-events','visiblePainted');
@@ -2074,7 +2018,7 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
 
 mapmap.prototype.hoverInfo = function(spec, options) {
 
-    var DEFAULTS = {
+    options = dd.merge({
         selection: null,
         hoverClassName: 'hoverInfo',
         hoverStyle: {
@@ -2088,9 +2032,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         hoverLeaveStyle: {
             display: 'none'
         }
-    }
-    
-    options = mapmap.extend({}, DEFAULTS, options);
+    }, options);
     
     var hoverEl = this._elements.parent.find('.' + options.hoverClassName);
 
@@ -2148,17 +2090,53 @@ mapmap.prototype.clear = function() {
     return this;
 };
 
-// namespace for re-usable behaviours
+// namespace for re-usable behaviors
 mapmap.behavior = {};
 
 mapmap.behavior.zoom = function(options) {
 
-    var defaults = {
-        // event callbacks
+    options = dd.merge({
+        event: 'click',
+        cursor: 'pointer',
+        fitScale: 0.7,
+        animationDuration: 750,
+        maxZoom: 8,
+        hierarchical: false,
+        showRing: true,
+        ringRadius: 1.1, // relative to height/2
         zoomstart: null,
-        zoomend: null
-    };
-    
+        zoomend: null,
+        ringAttributes: {
+            stroke: '#000',
+            'stroke-width': 6,
+            'stroke-opacity': 0.3,
+            'pointer-events': 'none',
+            fill: 'none'
+        },
+        closeButton: function(parent) {
+            parent.append('circle')
+                .attr({
+                    r: 10,
+                    fill: '#fff',
+                    stroke: '#000',
+                    'stroke-width': 2.5,
+                    'stroke-opacity': 0.9,
+                    'fill-opacity': 0.9,
+                    cursor: 'pointer'
+                });
+                
+            parent.append('text')
+                .attr({
+                    'text-anchor':'middle',
+                    cursor: 'pointer',
+                    'font-weight': 'bold',
+                    'font-size': '18',
+                    y: 6
+                })
+                .text('×');
+        }
+    }, options);
+        
     var ring = null,
         map = null,
         r, r0,
@@ -2168,8 +2146,6 @@ mapmap.behavior.zoom = function(options) {
             
         map = this;
 
-        options = mapmap.extend(true, {}, map.settings.zoomOptions, defaults, options);
-        
         var size = this.size();
         
         r = size.height / 2.0 * options.ringRadius;
@@ -2211,7 +2187,7 @@ mapmap.behavior.zoom = function(options) {
         }
 
         // this is currently needed if e.g. search zooms to somewhere else,
-        // but map is still zoomed in through this behaviour
+        // but map is still zoomed in through this behavior
         // do a reset(), but without modifying the map view (=zooming out)
         map.on('view', function(translate, scale) {
             if (zoomed && scale == 1) {
@@ -2275,7 +2251,7 @@ mapmap.behavior.zoom = function(options) {
             ring.select('g.zoomOut').transition().duration(options.animationDuration)
                 .attr('transform', 'translate(' + (new_r * 0.707) + ',-' + (new_r * 0.707) + ')'); // sqrt(2) / 2
 
-            // caveat: make sure to assign this every time to apply correct closure if we have multiple zoom behaviours!!
+            // caveat: make sure to assign this every time to apply correct closure if we have multiple zoom behaviors!!
             ring.select('g.zoomOut').on('click', reset);
         }
     }
@@ -2313,11 +2289,11 @@ mapmap.behavior.zoom = function(options) {
                 zoomTo(zoomed);
             }
             */
-            // TODO: make up our mind whether this should remove the other behaviour
+            // TODO: make up our mind whether this should remove the other behavior
             // in burgenland_demographie.html, we need to keep it as it would otherwise zoom out
-            // but if we mix different behaviours, we may want to remove the other one automatically
+            // but if we mix different behaviors, we may want to remove the other one automatically
             // (or maybe require it to be done manually)
-            // in pendeln.js, we remove the other behaviour here, which is inconsistent!
+            // in pendeln.js, we remove the other behavior here, which is inconsistent!
             
             //other.remove();
         }
@@ -2327,7 +2303,10 @@ mapmap.behavior.zoom = function(options) {
     return z;
 };
 
-mapmap.prototype.animateView = function(translate, scale, callback) {
+mapmap.prototype.animateView = function(translate, scale, callback, duration) {
+
+    duration = duration || 750;
+    
     if (translate[0] == this.current_translate[0] && translate[1] == this.current_translate[1] && scale == this.current_scale) {
         // nothing to do
         // yield to simulate async callback
@@ -2341,7 +2320,7 @@ mapmap.prototype.animateView = function(translate, scale, callback) {
     callHoverOut();
     var map = this;
     this._elements.map.transition()
-        .duration(this.settings.zoomOptions.animationDuration)
+        .duration(duration)
         .call(map.zoom.translate(translate).scale(scale).event)
         .each('start', function() {
             map._elements.shadowGroup.attr('display','none');
@@ -2389,12 +2368,16 @@ mapmap.prototype.getView = function() {
 };
 
 mapmap.prototype.zoomToSelection = function(selection, options) {
-    var sel = this.getRepresentations(selection),
-        bounds = [[Infinity,Infinity],[-Infinity, -Infinity]];
     
-    options = mapmap.extend({}, this.settings.zoomOptions, options);
+    options = dd.merge({
+        fitScale: 0.7,
+        animationDuration: 750,
+        maxZoom: 8
+    }, options);
 
-    var pathGenerator = d3.geo.path().projection(this._projection);    
+    var sel = this.getRepresentations(selection),
+        bounds = [[Infinity,Infinity],[-Infinity, -Infinity]],
+        pathGenerator = d3.geo.path().projection(this._projection);    
     
     sel.each(function(el){
         var b = pathGenerator.bounds(el);
@@ -2411,11 +2394,11 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
         size = this.size(),
         scale = Math.min(options.maxZoom, options.fitScale / Math.max(dx / size.width, dy / size.height)),
         translate = [size.width * center.x - scale * x, size.height * center.y - scale * y];
-    this.animateView(translate, scale, options.callback);
+    this.animateView(translate, scale, options.callback, options.animationDuration);
     return this;
 };
 
-mapmap.prototype.zoomToBounds = function(bounds, callback) {
+mapmap.prototype.zoomToBounds = function(bounds, callback, duration) {
     var w = bounds[1][0]-bounds[0][0],
         h = bounds[1][1]-bounds[0][1],
         cx = (bounds[1][0]+bounds[0][0]) / 2,
@@ -2424,20 +2407,20 @@ mapmap.prototype.zoomToBounds = function(bounds, callback) {
         scale = Math.min(2, 0.9 / Math.max(w / size.width, h / size.height)),
         translate = [size.width * 0.5 - scale * cx, size.height * 0.5 - scale * cy];
     
-    return this.animateView(translate, scale, callback);
+    return this.animateView(translate, scale, callback, duration);
 };
 
-mapmap.prototype.zoomToCenter = function(center, scale, callback) {
+mapmap.prototype.zoomToCenter = function(center, scale, callback, duration) {
 
     scale = scale || 1;
     
     var size = this.size(),
         translate = [size.width * 0.5 - scale * center[0], size.height * 0.5 - scale * center[1]];
 
-    return this.animateView(translate, scale, callback);
+    return this.animateView(translate, scale, callback, duration);
 };
 
-mapmap.prototype.zoomToViewportPosition = function(center, scale, callback) {
+mapmap.prototype.zoomToViewportPosition = function(center, scale, callback, duration) {
 
     var point = this._elements.main.node().createSVGPoint();
 
@@ -2450,17 +2433,14 @@ mapmap.prototype.zoomToViewportPosition = function(center, scale, callback) {
     point = [point.x, point.y];
     
     scale = scale || 1;
-
-    console.log(point);
     
     //var point = [(center[0]-this.current_translate[0])/this.current_scale, (center[1]-this.current_translate[1])/this.current_scale];
     
-    return this.zoomToCenter(point, scale, callback);
-    //return this.animateView(translate, scale, callback);
+    return this.zoomToCenter(point, scale, callback, duration);
 };
 
-mapmap.prototype.resetZoom = function(callback) {
-    return this.animateView([0,0],1, callback);
+mapmap.prototype.resetZoom = function(callback, duration) {
+    return this.animateView([0,0],1, callback, duration);
     // TODO take center into account zoomed-out, we may not always want this?
     //doZoom([width * (center.x-0.5),height * (center.y-0.5)],1);
 };
@@ -2468,7 +2448,7 @@ mapmap.prototype.resetZoom = function(callback) {
 
 // Manipulate representation geometry. This can be used e.g. to register event handlers.
 // spec is a function to be called with selection to set up event handler
-mapmap.prototype.applyBehaviour = function(spec, selection) {
+mapmap.prototype.applyBehavior = function(spec, selection) {
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
@@ -2476,23 +2456,47 @@ mapmap.prototype.applyBehaviour = function(spec, selection) {
             spec.call(map, sel);
         }
         else {
-            throw "Behaviour " + spec + " not a function";
+            throw "Behavior " + spec + " not a function";
         }
     });
     return this;
 };
 
-// apply a behaviour on the whole map pane (e.g. drag/zoom etc.)
-mapmap.prototype.applyMapBehaviour = function(spec) {
+
+// apply a behavior on the whole map pane (e.g. drag/zoom etc.)
+mapmap.prototype.applyMapBehavior = function(spec) {
     spec.call(this, this._elements.map);
     return this;
 };
+
+
+// deprecated methods using UK-spelling
+mapmap.prototype.applyBehaviour = function(spec, selection) {
+    console && console.log && console.log("Deprecation warning: applyBehaviour() is deprecated, use applyBehavior() (US spelling) instead!");
+    return this.applyBehavior(spec, selection);
+}
+mapmap.prototype.applyMapBehaviour = function(spec, selection) {
+    console && console.log && console.log("Deprecation warning: applyMapBehaviour() is deprecated, use applyMapBehavior() (US spelling) instead!");
+    return this.applyMapBehavior(spec, selection);
+}
 
 // handler for high-level events on the map object
 mapmap.prototype.on = function(eventName, handler) {
     this.dispatcher.on(eventName, handler);
     return this;
 };
+
+function defaultRangeLabel(a, b, format, excludeLower) {
+    format = format || function(a){return a};
+    var lower = excludeLower ? '> ' : '';
+    if (isNaN(a) && !isNaN(b)) {
+        return "up to " + format(b);
+    }
+    if (isNaN(b) && !isNaN(a)) {
+        return lower + format(a) + " and above";
+    }
+    return (lower + format(a) + " to " + format(b));
+}
 
 var d3_locales = {
     'en': {
@@ -2508,7 +2512,7 @@ var d3_locales = {
         shortDays: [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ],
         months: [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ],
         shortMonths: [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ],
-        rangeLabel: function(a,b) { return (a + " to " + b); }
+        rangeLabel: defaultRangeLabel
     },
     'de': {
         decimal: ",",
@@ -2523,7 +2527,17 @@ var d3_locales = {
         shortDays: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
         months: ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
         shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
-        rangeLabel: function(a,b) { return (a + " bis " + b); }
+        rangeLabel: function(a, b, format, excludeLower) {
+            format = format || function(a){return a};
+            var lower = excludeLower ? '> ' : '';
+            if (isNaN(a) && !isNaN(b)) {
+                return "bis zu " + format(b);
+            }
+            if (isNaN(b) && !isNaN(a)) {
+                return lower + format(a) + " und mehr";
+            }
+            return (lower + format(a) + " bis " + format(b));
+        }
     }
 };
 
@@ -2600,8 +2614,6 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         return this;
     }
     
-    var options = mapmap.extend(true, {}, this.settings.legendOptions);
-    
     if (typeof metadata == 'string') {
         metadata = mapmap.getMetadata(metadata);
     }
@@ -2617,16 +2629,10 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         // for quantization scales we have invertExtent to fully specify bins
         labelFormat = function(d,i) {
             var extent = scale.invertExtent(d);
-            if (isNaN(extent[0])) {
-                return "unter " + metadata.format(extent[1]);
+            if (map.locale && map.locale.rangeLabel) {
+                return map.locale.rangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
             }
-            if (isNaN(extent[1])) {
-                return "> " + metadata.format(extent[0]) + " und mehr";
-            }
-            if (map._locale) {
-                return ((i<range.length-1) ? "> " : "") + map._locale.rangeLabel(metadata.format(extent[0]), metadata.format(extent[1]));
-            }
-            return ((i<range.length-1) ? "> " : "") + metadata.format(extent[0]) + " - " + metadata.format(extent[1]);
+            return defaultRangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
         };
     }
     else {
@@ -2661,7 +2667,7 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
 
     histogram = make_histogram(histogram_objects);
     
-    this.legend_func.call(this, value, metadata, range, labelFormat, histogram, options);
+    this.legend_func.call(this, value, metadata, range, labelFormat, histogram);
                     
     return this;
 
@@ -2704,7 +2710,7 @@ mapmap.legend.html = function(options) {
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(value, metadata, range, labelFormat, histogram, rtOptions) {
+    return function(value, metadata, range, labelFormat, histogram) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2717,7 +2723,7 @@ mapmap.legend.html = function(options) {
         
         // TODO: value may be a function, so we cannot easily generate a label for it
         var title = legend.selectAll('h3')
-            .data([valueOrCall(metadata.label, value) || '']);
+            .data([valueOrCall(metadata.label, value) || (dd.isString(value) ? value : '')]);
             
         title.enter()
             .append('h3');
@@ -2927,7 +2933,9 @@ mapmap.prototype.extent = function(selection, options) {
 
 mapmap.prototype._extent = function(geom, options) {
 
-    options = mapmap.extend(true, {}, this.settings.extentOptions, options);
+    options = dd.merge({
+        fillFactor: 0.9
+    }, options);
     
     // convert/merge topoJSON
     if (geom.type && geom.type == 'Topology') {
@@ -2948,19 +2956,23 @@ mapmap.prototype._extent = function(geom, options) {
     }
     
     // reset scale to be able to calculate extents of geometry
-    this._projection.scale(1);
+    this._projection.scale(1).translate([0, 0]);
     var pathGenerator = d3.geo.path().projection(this._projection);
     var bounds = pathGenerator.bounds(geom);
-    var geo_bounds = d3.geo.bounds(geom);
+    // use absolute values, as east does not always have to be right of west!
+    bounds.height = Math.abs(bounds[1][1] - bounds[0][1]);
+    bounds.width = Math.abs(bounds[1][0] - bounds[0][0]);
+    
+    // if we are not centered in midpoint, calculate "padding factor"
     var fac_x = 1 - Math.abs(0.5 - center.x) * 2,
         fac_y = 1 - Math.abs(0.5 - center.y) * 2;
+        
     var size = this.size();
-    var scale = options.size / Math.max((bounds[1][0] - bounds[0][0]) / size.width / fac_x, (bounds[1][1] - bounds[0][1]) / size.height / fac_y);
+    var scale = options.fillFactor / Math.max(bounds.width / size.width / fac_x, bounds.height / size.height / fac_y);
     
     this._projection
         .scale(scale)
-        .center([(geo_bounds[0][0] + geo_bounds[1][0]) / 2, (geo_bounds[0][1] + geo_bounds[1][1]) / 2])
-        .translate([size.width / 2, size.height / 2]);  
+        .translate([(size.width - scale * (bounds[1][0] + bounds[0][0]))/ 2, (size.height - scale * (bounds[1][1] + bounds[0][1]))/ 2]);  
     
     // apply new projection to existing paths
     this._elements.map.selectAll("path")
