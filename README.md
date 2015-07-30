@@ -166,7 +166,7 @@ polyfills.
 
 ### License
 
-mapmap.js is licensed under the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl-3.0.en.html) -- this means if you use mapmap.js in your projects you need to publish the project's source code under a similar license. If this is a problem for you and you want to inquire about other options, contact the author.
+mapmap.js is licensed under the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl-3.0.en.html) -- this means if you use the library in your project you need to publish the project's source code under a similar license. If this is a problem for you and you want to inquire about other options, contact the author.
 
 ### Credits
 
