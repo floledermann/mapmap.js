@@ -632,7 +632,7 @@ dd.reverse = function(data) {
 module.exports = dd;
 
 },{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
-/*! mapmap.js 0.2.3 © 2014-2015 Florian Ledermann 
+/*! mapmap.js 0.2.4 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -650,7 +650,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var dd = require('datadata');
 
-var version = '0.2.3';
+var version = '0.2.4';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
