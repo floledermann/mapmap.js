@@ -170,6 +170,8 @@ If you use mapmap.js in research and publish a paper about your work, please cit
 
 > Ledermann, F. (2015) *mapmap.js: A high-level client-side API for interactive thematic maps*. In: M. Brovelli et. al. (Eds.) "FOSS4G Europe Como 2015" Geomatics Workbooks, 12 (2015), ISSN: 1591-092X; p. 581 - 582. 
 
+mapmap.js is created at [TU Wien Cartography Group](http://cartography.tuwien.ac.at/) by [Flo Ledermann](https://twitter.com/floledermann).
+
 ## More information 
 
 For more information, see the
