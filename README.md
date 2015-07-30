@@ -164,6 +164,10 @@ include the appropriate library.
 For production use in older browsers, you may need to load some 
 polyfills. 
 
+### License
+
+mapmap.js is licensed under the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl-3.0.en.html) -- this means if you use mapmap.js in your projects you need to publish the project's source code under a similar license. If this is a problem for you and you want to inquire about other options, contact the author.
+
 ### Credits
 
 If you use mapmap.js in research and publish a paper about your work, please cite the following publication ([BibTex Entry](http://publik.tuwien.ac.at/showbibtex.php?ID=239910)):
