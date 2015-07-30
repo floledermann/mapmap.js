@@ -1,5 +1,10 @@
 # mapmap.js Changelog
 
+## 0.2.4
+
+- do not add inline CSS border to HTML legend color boxes - this can be easily added through CSS
+- upstream syntax fix in datadata library (#9)
+
 ## 0.2.3
 
 - extent() now only modifies the projections scale and translation, leaving center alone. This allows using rotated projections.

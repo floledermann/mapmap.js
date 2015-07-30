@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 'use strict';
 
 // test whether in a browser environment
-http://stackoverflow.com/a/4224668/171579
 if (typeof window === 'undefined') {
     // node
     var d3dsv = require('d3-dsv');
@@ -2695,14 +2694,15 @@ mapmap.legend.html = function(options) {
             width: '3em',
             height: '1.5em',
             'vertical-align': '-0.5em',
-            border: '1px solid black',
+            //border: '1px solid #444444',
             margin: '0 0.5em 0.2em 0'
         },
         colorFillStyle: {
             width: '0',
             height: '0',
             'border-width': '100px',
-            'border-style': 'solid'
+            'border-style': 'solid',
+            'border-color': '#ffffff'
         },
         histogramBarStyle: {},
         textStyle: {}
@@ -2772,7 +2772,8 @@ mapmap.legend.html = function(options) {
                 });
         }
 
-        cells.select('.legendColor .fill').transition()
+        cells.select('.legendColor .fill')
+            .transition()
             .style({
                 'background-color': function(d) {return d;},
                 'border-color': function(d) {return d;},
