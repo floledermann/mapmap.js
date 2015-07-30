@@ -36,14 +36,14 @@ if (typeof window === 'undefined') {
                 data = func(data, row);
                 callback(null,data);
             });
-        }
+        };
     };
     
     var d3 = {
         csv: fileparser(d3dsv.csv.parse),
         tsv: fileparser(d3dsv.tsv.parse),
         json: fileparser(JSON.parse)
-    }
+    };
 
 } else {
     // browser
@@ -75,7 +75,7 @@ function rowFileHandler(loader) {
                 resolve(dd.mapreduce(data, map, reduce));                    
             });
         }); 
-    }
+    };
 }
 
 function jsonFileHandler(path, map, reduce) {
@@ -104,7 +104,7 @@ function jsonFileHandler(path, map, reduce) {
                         v.__key__ = k;
                         // call user-provided map funtion with object
                         map(v, emit);
-                    }
+                    };
                 }
                 resolve(dd.mapreduce(keys, map_func, reduce));
             }                    
@@ -116,17 +116,17 @@ var fileHandlers = {
     'csv':  rowFileHandler(d3.csv),
     'tsv':  rowFileHandler(d3.tsv),
     'json': jsonFileHandler
-}
+};
 
 var getFileHandler = function(pathOrExt) {
     // guess type
     var ext = pathOrExt.split('.').pop().toLowerCase();
     return fileHandlers[ext] || null;
-}
+};
 
 var registerFileHandler = function(ext, handler) {
     fileHandlers[ext] = handler;
-}
+};
 
 // TODO: register .topojson, .geojson in mapmap.js
 
@@ -168,7 +168,7 @@ var dd = function(spec, map, reduce, options) {
         });
     }
     throw new Error("datadata.js: Unknown data specification.");
-}
+};
 
 // expose registration method
 dd.registerFileHandler = registerFileHandler;
@@ -197,7 +197,7 @@ dd.load = function(spec, key) {
         }
         else {
             return new Promise(function(resolve, reject) {
-                d3.csv(obj, function(row) {
+                d3.csv(spec, function(row) {
                     var keys = Object.keys(row);
                     for (var i=0; i<keys.length; i++) {
                         var key = keys[i];
@@ -218,7 +218,7 @@ dd.load = function(spec, key) {
             });
         }
     }
-}
+};
 
 
 // Type checking
@@ -228,35 +228,35 @@ Return true if argument is a string.
 */
 dd.isString = function (val) {
   return Object.prototype.toString.call(val) == '[object String]';
-}
+};
 /**
 Return true if argument is a function.
 @param {any} val - The value to check.
 */
 dd.isFunction = function(obj) {
     return (typeof obj === 'function');
-}
+};
 /**
 Return true if argument is an Array.
 @param {any} val - The value to check.
 */
 dd.isArray = function(obj) {
     return (obj instanceof Array);
-}
+};
 /**
 Return true if argument is an Object, but not an Array, String or anything created with a custom constructor.
 @param {any} val - The value to check.
 */
 dd.isDictionary = function(obj) {
     return (obj && obj.constructor && obj.constructor === Object);
-}
+};
 /**
 Return true if argument is undefined.
 @param {any} val - The value to check.
 */
 dd.isUndefined = function(obj) {
     return (typeof obj == 'undefined');
-}
+};
 
 // Type conversion / utilities
 /**
@@ -267,7 +267,7 @@ dd.toArray = function(val) {
     if (!val) return [];
     // return a copy if aready array, else single-element array
     return dd.isArray(val) ? val.slice() : [val];
-}
+};
 
 /**
 Shallow object merging, mainly for options. Returns a new object.
@@ -286,7 +286,7 @@ dd.merge = function() {
     }
 
     return obj;
-}
+};
 
 /**
 Return an {@link module:datadata.OrderedHash|OrderedHash} object.
@@ -359,29 +359,29 @@ dd.map = {
                 key = remap[key];
             }
             emit(key, d);
-        }
+        };
     },
     dict: function(dict) {
         return function(d, emit) {
             emit(d, dict[d]);
-        }
+        };
     }
 };
 dd.emit = {
     ident: function() {
         return function(key, values, emit) {
             emit(key, values);
-        }
+        };
     },
     first: function() {
         return function(key, values, emit) {
             emit(key, values[0]);
-        }
+        };
     },
     last: function() {
         return function(key, values, emit) {
             emit(key, values[values.length - 1]);
-        }
+        };
     },
     merge: function() {
         return function(key, values, emit) {
@@ -395,7 +395,7 @@ dd.emit = {
             });
             
             emit(key, obj);
-        }
+        };
     },
     toAttr: function(attr, func) {
         func = func || dd.emit.last();
@@ -405,7 +405,7 @@ dd.emit = {
                 obj[attr] = v;
                 emit(k, obj);
             });
-        }
+        };
     },
     sum: function(include, exclude) {
         include = wildcards(include || '*');
@@ -416,15 +416,16 @@ dd.emit = {
                 var keys = Object.keys(curr);
                 for (var i=0; i<keys.length; i++) {
                     var key = keys[i],
-                        doAdd = false;
+                        doAdd = false,
+                        j;
                     
-                    for (var j=0; j<include.length; j++) {
+                    for (j=0; j<include.length; j++) {
                         if (key.search(include[i]) > -1) {
                             doAdd = true;
                             break;
                         }
                     }
-                    for (var j=0; j<exclude.length; j++) {
+                    for (j=0; j<exclude.length; j++) {
                         if (key.search(include[j]) > -1) {
                             doAdd = false;
                             break;
@@ -444,7 +445,7 @@ dd.emit = {
             });
             
             emit(key, obj);
-        }
+        };
     }
 };
 
@@ -454,7 +455,7 @@ dd.map.geo = {
         return function(d, emit) {
             var key = keyProp ? d[keyProp] : id++;
             emit(key, dd.geo.Point(d[lonProp], d[latProp], d));
-        }
+        };
     }
 };
 
@@ -469,7 +470,7 @@ dd.emit.geo = {
                 }
                 prev = cur;
             }
-        }
+        };
     }
 };
 
@@ -552,7 +553,7 @@ dd.envelope = function(key, pull, func) {
         if (pull && typeof pull == 'function') {
             // envelope(key, func) case
             func = pull;
-            pull = none;
+            pull = null;
         }
         if (func) d = func(d);
         var val = {};
@@ -562,8 +563,8 @@ dd.envelope = function(key, pull, func) {
             delete d[pull];
         }
         return val;
-    }
-}
+    };
+};
 dd.prefix = function(prefix, func) {
     return function(d) {
     
@@ -577,8 +578,8 @@ dd.prefix = function(prefix, func) {
         }
             
         return val;
-    }
-}
+    };
+};
 dd.prefix_attr = function(attr, func) {
     return function(d) {
     
@@ -593,8 +594,8 @@ dd.prefix_attr = function(attr, func) {
         }
             
         return val;
-    }
-}
+    };
+};
 dd.map_attr = function(map, func) {
     return function(d) {
     
@@ -619,15 +620,15 @@ dd.map_attr = function(map, func) {
         }
             
         return d;
-    }
-}
+    };
+};
 dd.reverse = function(data) {
     if (data.slice && typeof data.slice == 'function') {
         // slice() = copy
         return data.slice().reverse(); 
     }
     return data;
-}
+};
 
 module.exports = dd;
 
@@ -1504,8 +1505,8 @@ var MetaData = function(fields, localeProvider) {
         if (this.numberFormat && typeof this.numberFormat == 'function') {
             return this.numberFormat;
         }
-        if (localeProvider._locale) {
-            return localeProvider._locale.numberFormat(this.numberFormat || '.01f');
+        if (localeProvider.locale) {
+            return localeProvider.locale.numberFormat(this.numberFormat || '.01f');
         }
         return d3.format(this.numberFormat || '.01f');
     };
@@ -2519,7 +2520,7 @@ var d3_locales = {
         grouping: [3],
         currency: ["€", ""],
         dateTime: "%a %b %e %X %Y",
-        date: "%m/%d/%Y",
+        date: "%d.%m.%Y",
         time: "%H:%M:%S",
         periods: ["AM", "PM"],
         days: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
