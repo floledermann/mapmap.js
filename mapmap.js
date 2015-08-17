@@ -150,10 +150,11 @@ var dd = function(spec, map, reduce, options) {
 
     // options
     // type: override file extension, e.g. for API urls (e.g. 'csv')
+    // fileHandler: manually specify file handler to be used to load & parse file
     options = options || {};
 
     if (spec == null) throw new Error("datadata.js: No data specification.");
-    
+        
     if (map && !dd.isFunction(map)) {
         // map is string -> map to attribute value
         map = dd.map.key(map);
@@ -161,7 +162,7 @@ var dd = function(spec, map, reduce, options) {
     
     if (dd.isString(spec)) {
         // consider spec to be a URL/file to load
-        var handler = getFileHandler(options.type || spec);
+        var handler = options.fileHandler || getFileHandler(options.type || spec);
         if (handler) {
             return handler(spec, map, reduce, options);
         }
@@ -177,8 +178,9 @@ var dd = function(spec, map, reduce, options) {
     throw new Error("datadata.js: Unknown data specification.");
 };
 
-// expose registration method
+// expose registration method & rowFileHandler helper
 dd.registerFileHandler = registerFileHandler;
+dd.rowFileHandler = rowFileHandler;
 
 // simple load function, returns a promise for data without map/reduce-ing
 // DO NOT USE - present only for legacy reasons

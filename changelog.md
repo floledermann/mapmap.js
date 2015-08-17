@@ -1,5 +1,6 @@
 # mapmap.js Changelog
 
+- support passing a file handler for customized parsing to `.data()` through the fileHandler option (#15).
 - support passing an accessor/row-conversion function to `.data()` through the `accessor` option (#10).
 
 ## 0.2.4
