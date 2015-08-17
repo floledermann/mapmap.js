@@ -1,5 +1,7 @@
 # mapmap.js Changelog
 
+- support passing an accessor/row-conversion function to `.data()` through the `accessor` option (#10).
+
 ## 0.2.4
 
 - do not add inline CSS border to HTML legend color boxes - this can be easily added through CSS
