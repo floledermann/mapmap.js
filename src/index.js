@@ -812,7 +812,7 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
         });
     }
     else {
-        this.promise_data(dd(spec, options.map, options.reduce))
+        this.promise_data(dd(spec, options.map, options.reduce, options))
         .then(function(data) {
             map._elements.geometry.selectAll('path')
                 .each(function(d) {
