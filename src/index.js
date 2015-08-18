@@ -1425,11 +1425,9 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
             mainEl = this._elements.main.node(),
-            scrollTop = window.pageYOffset || documentElement.scrollTop || body.scrollTop || 0,
+            scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
             top = mainEl.getBoundingClientRect().top + scrollTop - offsetEl.offset().top;
-            
-        console.log(top);
-        
+                    
         hoverEl
             .css({
                 bottom: (offsetHeight - top - point.y) + 'px',
