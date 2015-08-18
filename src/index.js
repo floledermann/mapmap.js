@@ -1513,7 +1513,7 @@ mapmap.behavior.zoom = function(options) {
 
         var size = this.size();
         
-        r = size.height / 2.0 * options.ringRadius;
+        r = Math.min(size.height, size.width) / 2.0 * options.ringRadius;
         r0 = Math.sqrt(size.width*size.width + size.height*size.height) / 1.5;
             
         if (!options.center) {
