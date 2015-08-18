@@ -671,6 +671,9 @@ var default_settings = {
     locale: 'en',
     keepAspectRatio: true,
     placeholderClassName: 'placeholder',
+    svgAttributes: {
+        'overflow': 'hidden' // needed for IE
+    },
     pathAttributes: {
         'fill': 'none',
         'stroke': '#000',
@@ -768,7 +771,9 @@ mapmap.prototype.initEngine = function(element) {
     // HTML elements, stored as d3 selections    
     var mainEl = d3.select(element).classed('mapmap', true),
         mapEl = mainEl.append('g').attr('class', 'map');
-        
+    
+    mainEl.attr(this.settings.svgAttributes);
+    
     this._elements = {
         main: mainEl,
         map: mapEl,
