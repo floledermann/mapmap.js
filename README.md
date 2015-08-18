@@ -127,6 +127,10 @@ To use mapmap.js in the browser, you need to load D3.js and jQuery before loadin
 <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 ``` 
 
+> Internet Explorer and older versions of other browsers also require a polyfill for the Promise object, which is built
+> into newer JavaScript Engines. You can find a polyfill for Promise [here](https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js).
+> Save the file and add a script tag for it.
+
 Then include your downloaded copy of
 [mapmap.js](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.js) 
 or
@@ -160,9 +164,6 @@ var map = mapmap('#mapEl')
 
 For processing [TopoJSON](https://github.com/mbostock/topojson) geometry, you need to 
 include the appropriate library. 
-
-For production use in older browsers, you may need to load some 
-polyfills. 
 
 ### License
 
