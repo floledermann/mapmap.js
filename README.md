@@ -127,9 +127,9 @@ To use mapmap.js in the browser, you need to load D3.js and jQuery before loadin
 <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 ``` 
 
-> Internet Explorer and older versions of other browsers also require a polyfill for the Promise object, which is built
-> into newer JavaScript Engines. You can find a polyfill for Promise [here](https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js).
-> Save the file and add a script tag for it.
+Internet Explorer and older versions of other browsers also require a ***polyfill*** for the Promise object, which is built
+into newer JavaScript Engines. You can find a polyfill for Promise [here](https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js).
+Save the file and add a script tag for it.
 
 Then include your downloaded copy of
 [mapmap.js](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.js) 
@@ -142,7 +142,7 @@ in a script tag.
 ``` 
 
 In your HTML code, you need to create an SVG element that is used as the root element of your map.
-*You need to set the width and height attributes of the element* to specify the aspect ratio and
+***You need to set the width and height attributes of the element*** to specify the aspect ratio and
 abstract resolution of your map - you can use CSS to override these and define the actual dimensions
 of your map.
 
@@ -151,13 +151,13 @@ of your map.
 ```
 
 In order to correctly position HTML-based information on the map, the SVG element must be
-descendant of a *positioned element*, i.e. an element with `position:` `absolute`, `relative` or `fixed`.
+descendant of a ***positioned element***, i.e. an element with `position:` `absolute`, `relative` or `fixed`.
 
 The most simple map you can create will just render some GeoJSON:
 
 ```js
 var map = mapmap('#mapEl')
-    .geometry('mygeodata.geojson');
+    .geometry('counties.geojson');
 ```
 
 ### Optional dependencies
