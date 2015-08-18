@@ -1,5 +1,9 @@
 # mapmap.js Changelog
 
+## 0.2.6
+
+- Fix bug in hoverInfo introduced in 0.2.5
+
 ## 0.2.5
 
 - Browser compatibility fixes for map resizing and hoverInfo positioning (#13)
