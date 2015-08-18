@@ -928,15 +928,9 @@ mapmap.prototype.initEvents = function(element) {
         if (map.settings.keepAspectRatio) {
             var width = element.getAttribute('width'),
                 height = element.getAttribute('height');
-            if (width && height) {
-                var ratio = width / height,
-                    bounds = element.getBoundingClientRect ? element.getBoundingClientRect() : null,
-                    // if there are problems with this, another attempt would be getComputedStyle()
-                    // see http://stackoverflow.com/questions/13122790/how-to-get-svg-element-dimensions-in-firefox
-                    realWidth = element.clientWidth || element.parentNode.clientWidth; //(bounds ? (bounds.right - bounds.left) : 0);
-                if (realWidth) {
-                    element.style.height = (realWidth / ratio) + 'px';
-                }
+            if (width && height && map.bounds.width) {
+                var ratio = width / height;
+                element.style.height = (map.bounds.width / ratio) + 'px';
             }
         }
     }
