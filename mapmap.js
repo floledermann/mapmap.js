@@ -1236,9 +1236,7 @@ mapmap.prototype.getBoundingClientRect = function() {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=530985
     // http://stackoverflow.com/questions/23684821/calculate-size-of-svg-element-in-html-page
     var el = this._elements.main.node(),
-        $el = $(el),
         bounds = el.getBoundingClientRect(),
-        offset = $el.offset(),
         cs = getComputedStyle(el),
         parentOffset = $(el.parentNode).offset(),
         left = parentOffset.left;
@@ -2070,12 +2068,15 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
-            mainEl = $(this._elements.main.node())
-            bottom = mainEl.position().top + mainEl.outerHeight(true);
+            mainEl = this._elements.main.node(),
+            scrollTop = window.pageYOffset || documentElement.scrollTop || body.scrollTop || 0,
+            top = mainEl.getBoundingClientRect().top + scrollTop - offsetEl.offset().top;
+            
+        console.log(top);
         
         hoverEl
             .css({
-                bottom: (offsetHeight - mainEl.position().top - point.y) + 'px',
+                bottom: (offsetHeight - top - point.y) + 'px',
                 //top: point.y + 'px',
                 left: point.x + 'px'
             })
