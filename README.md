@@ -175,7 +175,7 @@ If you use mapmap.js in research and publish a paper about your work, please cit
 
 > Ledermann, F., & Gartner, G. (2015). [*mapmap.js: A Data-Driven Web Mapping API for Thematic Cartography*](http://publik.tuwien.ac.at/files/PubDat_239999.pdf). In: Proceedings of the 27th International Cartographic Conference (ICC2015), Rio de Janeiro, Brasil.
 
-mapmap.js is created at [TU Wien Cartography Group](http://cartography.tuwien.ac.at/) by [Flo Ledermann](https://twitter.com/floledermann).
+mapmap.js is created at [TU Wien Cartography Group](http://cartography.tuwien.ac.at/) by [Florian Ledermann](https://twitter.com/floledermann).
 
 ## More information 
 
