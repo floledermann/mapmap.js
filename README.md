@@ -171,9 +171,9 @@ mapmap.js is licensed under the [GNU Affero General Public License](http://www.g
 
 ### Credits
 
-If you use mapmap.js in research and publish a paper about your work, please cite the following publication ([BibTex Entry](http://publik.tuwien.ac.at/showbibtex.php?ID=239910)):
+If you use mapmap.js in research and publish a paper about your work, please cite the following publication ([BibTex Entry](http://publik.tuwien.ac.at/showbibtex.php?ID=239999&lang=6)):
 
-> Ledermann, F. (2015) *mapmap.js: A high-level client-side API for interactive thematic maps*. In: M. Brovelli et. al. (Eds.) "FOSS4G Europe Como 2015" Geomatics Workbooks, 12 (2015), ISSN: 1591-092X; p. 581 - 582. 
+> Ledermann, F., & Gartner, G. (2015). [*mapmap.js: A Data-Driven Web Mapping API for Thematic Cartography*](http://publik.tuwien.ac.at/files/PubDat_239999.pdf). In: Proceedings of the 27th International Cartographic Conference (ICC2015), Rio de Janeiro, Brasil.
 
 mapmap.js is created at [TU Wien Cartography Group](http://cartography.tuwien.ac.at/) by [Flo Ledermann](https://twitter.com/floledermann).
 
