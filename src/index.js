@@ -995,7 +995,7 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
     this.promise_data().then(function(data) {      
         map.getRepresentations(selection)
             .each(function(geom) {
-                callback.call(map, d3.select(this), geom);
+                callback.call(map, d3.select(this), geom, geom.properties);
             });
         if (finalize) finalize.call(map);
     });
