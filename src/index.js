@@ -854,7 +854,8 @@ var MetaData = function(fields, localeProvider) {
         if (!this._format) {
             this._format = this.getFormatter();
         }
-        if ((this.numberFormat && (isNaN(val) || val === undefined || val === null)) || (!this.numberFormat && !val)) {
+        // return undefined if undefined or if not a number but number formatting explicitly requested
+        if (val === undefined || val === null || (this.numberFormat && (isNaN(val)))) {
             return this.undefinedValue;
         }
         return this._format(val);
