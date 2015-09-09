@@ -1029,7 +1029,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
                 metadata = this.getMetadata(spec);
             }
             colorScale = this.autoColorScale(spec, metadata);
-            this.updateLegend(spec, metadata, colorScale, selection);
+            this.updateLegend(spec, 'fill', metadata, colorScale, selection);
         }
         if (el.attr('fill') != 'none') {
             // transition if color already set
@@ -1077,7 +1077,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
                 metadata = this.getMetadata(spec);
             }
             colorScale = this.autoColorScale(spec, metadata);
-            this.updateLegend(spec, metadata, colorScale, selection);
+            this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
         }
         if (el.attr('stroke') != 'none') {
             // transition if color already set
@@ -1972,7 +1972,7 @@ mapmap.prototype.legend = function(legend_func) {
     this.legend_func = legend_func;
     return this;
 }
-mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
+mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, scale, selection) {
 
     if (!this.legend_func || !scale) {
         return this;
@@ -2019,19 +2019,23 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         thresholds = range.length;
     }
     
+    // TODO: this is calculation intensive
+    // think about an optional or more flexible coupling between legend and data!
+    
     var histogram_objects = this.getRepresentations(selection)[0];
     
     var make_histogram = d3.layout.histogram()
         .bins(thresholds)
         .value(function(d){
-            return d.__data__.properties[value];
-        })
-        // use "density" mode, giving us histogram y values in the range of [0..1]
-        .frequency(false);
+            return d.__data__.properties[attribute];
+        });
+        // use "count" mode
+        // to use "density" mode, giving us histogram y values in the range of [0..1]
+        //.frequency(false);
 
-    histogram = make_histogram(histogram_objects);
+    histogram = make_histogram(histogram_objects).reverse();
     
-    this.legend_func.call(this, value, metadata, range, labelFormat, histogram);
+    this.legend_func.call(this, attribute, reprAttribute, metadata, range, labelFormat, histogram);
                     
     return this;
 
@@ -2075,7 +2079,7 @@ mapmap.legend.html = function(options) {
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(value, metadata, range, labelFormat, histogram) {
+    return function(attribute, reprAttribute, metadata, range, labelFormat, histogram) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2086,9 +2090,9 @@ mapmap.legend.html = function(options) {
         
         legend.style(options.legendStyle);
         
-        // TODO: value may be a function, so we cannot easily generate a label for it
+        // TODO: attribute may be a function, so we cannot easily generate a label for it
         var title = legend.selectAll('h3')
-            .data([valueOrCall(metadata.label, value) || (dd.isString(value) ? value : '')]);
+            .data([valueOrCall(metadata.label, attribute) || (dd.isString(attribute) ? attribute : '')]);
             
         title.enter()
             .append('h3');
@@ -2111,17 +2115,69 @@ mapmap.legend.html = function(options) {
             .attr('class', 'legendCell')
             .style(options.cellStyle);
             
-        newcells.append('span')
-            .attr('class', 'legendColor')
-            .style(options.colorBoxStyle)
-            .append('span')
-            .attr('class', 'fill')
-            .style(options.colorFillStyle);
+        if (reprAttribute == 'fill') {
+            if (range[0].substring(0,4) != 'url(') {
+                newcells.append('span')
+                    .attr('class', 'legendColor')
+                    .style(options.colorBoxStyle)
+                    .append('span')
+                    .attr('class', 'fill')
+                    .style(options.colorFillStyle);
                     
+                cells.select('.legendColor .fill')
+                    .transition()
+                    .style({
+                        'background-color': function(d) {return d;},
+                        'border-color': function(d) {return d;},
+                        'color': function(d) {return d;}
+                    });
+            }
+            else {
+                newcells.append('svg')
+                    .attr('class', 'legendColor')
+                    .style(options.colorBoxStyle)
+                    .append('rect')
+                    .attr({
+                        width: 100,
+                        height: 100
+                    });
+                    
+                cells.select('.legendColor rect')
+                    .attr({
+                        'fill': function(d) {return d;}
+                    });
+            }
+        }
+        else if (reprAttribute == 'strokeColor') {
+        
+            newcells.append('span')
+                .attr('class', 'legendColor')
+                .style(options.colorBoxStyle)
+                .style('border', 'none')
+                .append('span')
+                .attr('class', 'fill')
+                .style(options.colorFillStyle);
+                
+            cells.select('.legendColor .fill')
+                .transition()
+                .style({
+                    'background-color': function(d) {return d;},
+                    'border-color': function(d) {return d;},
+                    'color': function(d) {return d;}
+                });
+        }
+        
         newcells.append('span')
             .attr('class','legendLabel')
             .style(options.textStyle);
+
+        cells.attr('data-count',function(d,i) {return histogram[i].y;});
         
+        cells.select('.legendLabel')
+            .text(labelFormat);
+            
+        // TODO: histogram stuff needs refactoring (see above in updateLegend)
+  
         if (options.histogram) {
 
             newcells.append('span')
@@ -2136,17 +2192,8 @@ mapmap.legend.html = function(options) {
                     return Math.round(width) + 'px';
                 });
         }
-
-        cells.select('.legendColor .fill')
-            .transition()
-            .style({
-                'background-color': function(d) {return d;},
-                'border-color': function(d) {return d;},
-                'color': function(d) {return d;}
-            });
         
-        cells.select('.legendLabel')
-            .text(labelFormat);
+        if (options.callback) options.callback();
     }
 }
 
