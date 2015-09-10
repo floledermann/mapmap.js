@@ -1499,7 +1499,15 @@ mapmap.behavior.zoom = function(options) {
                     y: 6
                 })
                 .text('×');
-        }
+        },
+        // TODO: how should highlighting work on the map generally?
+        // maybe more like setState('highlight') and options.activestyle = 'highlight' ?
+        activate: function(el) {
+            d3.select(el).classed('active', true);
+        },
+        deactivate: function(el) {
+            if (el) d3.select(el).classed('active', false);
+        }        
     }, options);
     
     var ring = null,
@@ -1565,6 +1573,7 @@ mapmap.behavior.zoom = function(options) {
                 reset();
             }
             else {
+                options.deactivate(zoomed);
                 var el = this;
                 options.zoomstart && options.zoomstart.call(map, el);
                 map.zoomToSelection(this, {
@@ -1575,6 +1584,7 @@ mapmap.behavior.zoom = function(options) {
                     center: options.center
                 });
                 animateRing(this);
+                options.activate(this);
                 zoomed = this;
                 map._elements.map.select('.background').on(options.event + '.zoom', reset);
             }
@@ -1620,6 +1630,7 @@ mapmap.behavior.zoom = function(options) {
         
     function reset() {
         if (map) {
+            options.deactivate(zoomed);
             zoomed = null;
             map.resetZoom();
             animateRing(null);
