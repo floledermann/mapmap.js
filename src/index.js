@@ -1470,6 +1470,7 @@ mapmap.behavior.zoom = function(options) {
         ringRadius: 1.1, // relative to height/2
         zoomstart: null,
         zoomend: null,
+        center: [center.x, center.y],
         ringAttributes: {
             stroke: '#000',
             'stroke-width': 6,
@@ -1500,7 +1501,7 @@ mapmap.behavior.zoom = function(options) {
                 .text('×');
         }
     }, options);
-        
+    
     var ring = null,
         map = null,
         r, r0,
@@ -1515,11 +1516,6 @@ mapmap.behavior.zoom = function(options) {
         r = Math.min(size.height, size.width) / 2.0 * options.ringRadius;
         r0 = Math.sqrt(size.width*size.width + size.height*size.height) / 1.5;
             
-        if (!options.center) {
-            // zoom to globally set center by default
-            options.center = [center.x, center.y];
-        }
-
         if (options.cursor) {
             selection.attr({
                 cursor: options.cursor
@@ -1575,7 +1571,8 @@ mapmap.behavior.zoom = function(options) {
                     callback: function() {
                         options.zoomend && options.zoomend.call(map, el);
                     },
-                    maxZoom: options.maxZoom
+                    maxZoom: options.maxZoom,
+                    center: options.center
                 });
                 animateRing(this);
                 zoomed = this;
@@ -1596,7 +1593,8 @@ mapmap.behavior.zoom = function(options) {
             callback: function() {
                 options.zoomend && options.zoomend.call(map, selection);
             },
-            maxZoom: options.maxZoom
+            maxZoom: options.maxZoom,
+            center: options.center
         });
         animateRing(selection);
         zoomed = selection;
@@ -1736,7 +1734,8 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
     options = dd.merge({
         fitScale: 0.7,
         animationDuration: 750,
-        maxZoom: 8
+        maxZoom: 8,
+        center: [center.x, center.y]
     }, options);
 
     var sel = this.getRepresentations(selection),
@@ -1757,7 +1756,7 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
         y = (bounds[0][1] + bounds[1][1]) / 2,
         size = this.size(),
         scale = Math.min(options.maxZoom, options.fitScale / Math.max(dx / size.width, dy / size.height)),
-        translate = [size.width * center.x - scale * x, size.height * center.y - scale * y];
+        translate = [size.width * options.center[0] - scale * x, size.height * options.center[1] - scale * y];
     this.animateView(translate, scale, options.callback, options.animationDuration);
     return this;
 };
