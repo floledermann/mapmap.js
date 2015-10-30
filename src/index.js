@@ -811,6 +811,9 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
     else {
         this.promise_data(dd(spec, options.map, options.reduce, options))
         .then(function(data) {
+            if (data.length() == 0) {
+                console.warn("Data for key '" + options.map + "' yielded no results!");
+            }
             map._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
@@ -819,7 +822,7 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
                             mapmap.extend(d.properties, data.get(k));
                         }
                         else {
-                            //console.warn("No '" + geometryKey + "' value present for " + this + "!");
+                            //console.warn("Key '" + options.geometryKey + "' not found in " + this + "!");
                         }    
                     }
                 });
