@@ -128,8 +128,8 @@ To use mapmap.js in the browser, you need to load D3.js and jQuery before loadin
 ``` 
 
 Internet Explorer and older versions of other browsers also require a ***polyfill for the Promise object***, which is built
-into newer JavaScript Engines. You can find a polyfill for Promise [here](https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js).
-Save the file and add a script tag for it.
+into newer JavaScript Engines. You can find a polyfill for Promise [here](https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js)
+(save the file and add a script tag for it), or you may use something like the [polyfill.io service](https://cdn.polyfill.io/v2/polyfill.js?features=Promise).
 
 Then include your downloaded copy of
 [mapmap.js](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.js) 
