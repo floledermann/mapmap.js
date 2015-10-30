@@ -1230,19 +1230,22 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40}
     }, options);
-
+    
     var bounds = repr.getBoundingClientRect();
     var pt = this._elements.main.node().createSVGPoint();
     
     pt.x = (bounds.left + bounds.right) / 2;
     pt.y = bounds.top;
     
-    var mapBounds = this.getBoundingClientRect();
+    var mapBounds = this.getBoundingClientRect(),
+        scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+        scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
+    ;
     if (options.clipToViewport) {                
-        if (pt.x < mapBounds.left + options.clipMargins.left) pt.x = mapBounds.left + options.clipMargins.left;
-        if (pt.x > mapBounds.right - options.clipMargins.right) pt.x = mapBounds.right - options.clipMargins.right;
-        if (pt.y < mapBounds.top + options.clipMargins.top) pt.y = mapBounds.top + options.clipMargins.top;
-        if (pt.y > mapBounds.bottom - options.clipMargins.bottom) pt.y = mapBounds.bottom - options.clipMargins.bottom;
+        if (pt.x < mapBounds.left - scrollLeft + options.clipMargins.left) pt.x = mapBounds.left - scrollLeft + options.clipMargins.left;
+        if (pt.x > mapBounds.right - scrollLeft - options.clipMargins.right) pt.x = mapBounds.right - scrollLeft - options.clipMargins.right;
+        if (pt.y < mapBounds.top - scrollTop + options.clipMargins.top) pt.y = mapBounds.top - scrollTop + options.clipMargins.top;
+        if (pt.y > mapBounds.bottom - scrollTop - options.clipMargins.bottom) pt.y = mapBounds.bottom - scrollTop - options.clipMargins.bottom;
     }
     pt.x -= mapBounds.left;
     pt.y -= mapBounds.top;
@@ -1256,9 +1259,13 @@ mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
         anchorOffset: [0,-20]
      }, options);
 
+     // http://www.jacklmoore.com/notes/mouse-position/
+     var offsetX = event.layerX || event.offsetX,
+         offsetY = event.layerY || event.offsetY;
+    
     return {
-        x: event.offsetX + options.anchorOffset[0],
-        y: event.offsetY + options.anchorOffset[1]
+        x: offsetX + options.anchorOffset[0],
+        y: offsetY + options.anchorOffset[1]
     }
 }
 
@@ -1291,9 +1298,15 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
                 this.parentNode.appendChild(this);
             }
             
-            var anchor = options.anchorPosition.call(map, d3.event, this, options);
+            var el = this,
+                event = d3.event;
             
-            overCB.call(map, d.properties, anchor, this);           
+            // In Firefox the event positions are not populated properly in some cases
+            // Defer call to allow browser to populate the event
+            window.setTimeout(function(){
+                var anchor = options.anchorPosition.call(map, event, el, options);           
+                overCB.call(map, d.properties, anchor, el);   
+            }, 10);
         };
         // reset previously overridden pointer events
         for (var i=0; i<map._oldPointerEvents.length; i++) {
@@ -1434,14 +1447,17 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
             mainEl = this._elements.main.node(),
+            bounds = map.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-            top = mainEl.getBoundingClientRect().top + scrollTop - offsetEl.offset().top;
-                    
+            scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
+            top = bounds.top + scrollTop - offsetEl.offset().top,
+            left = bounds.left + scrollLeft - offsetEl.offset().left;
+        
         hoverEl
             .css({
                 bottom: (offsetHeight - top - point.y) + 'px',
                 //top: point.y + 'px',
-                left: point.x + 'px'
+                left: (left + point.x) + 'px'
             })
             .html(htmlFunc(d));
     }
