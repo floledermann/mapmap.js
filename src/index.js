@@ -1850,6 +1850,9 @@ mapmap.prototype.applyBehavior = function(spec, selection) {
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
+        // TODO: this should be configurable via options
+        // and needs to integrate with managing pointer events (see hoverInfo)
+        sel.style('pointer-events','visiblePainted');
         if (typeof spec == 'function') {
             spec.call(map, sel);
         }
