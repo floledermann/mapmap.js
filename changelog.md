@@ -1,5 +1,12 @@
 # mapmap.js Changelog
 
+## 0.2.7
+
+- new metadata fields `valueUnit`, `undefinedLabel` and `undefinedColor` (See [documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation#metadata-fields)).
+- Improved positioning of hoverInfo (tooltips) when scrolled, fixed obscure Firefox bug for positioning them.
+- Fix bug causing zoom behavior to fail if no hoverInfo was active (#18)
+- Internal changes to legend generation code to make it more versatile
+
 ## 0.2.6
 
 - Fix bug in hoverInfo introduced in 0.2.5
