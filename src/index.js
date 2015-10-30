@@ -56,7 +56,9 @@ var default_settings = {
         // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
-        undefinedValue: "" //"undefined"
+        undefinedValue: "", //"undefined"
+        undefinedLabel: "undefined",
+        undefinedColor: 'transparent'
     }
 };
 
@@ -1042,7 +1044,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             var val = valueFunc(geom.properties);
             // explicitly check if value is valid - this can be a problem with ordinal scales
             if (typeof(val) == 'undefined') {
-                val = metadata.undefinedValue; 
+                return metadata.undefinedColor || map.settings.pathAttributes.fill;
             }
             return colorScale(val) || map.settings.pathAttributes.fill;
         });
@@ -1090,7 +1092,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
             var val = valueFunc(geom.properties);
             // explicitly check if value is valid - this can be a problem with ordinal scales
             if (typeof(val) == 'undefined') {
-                val = metadata.undefinedValue; 
+                return metadata.undefinedColor || map.settings.pathAttributes.stroke;
             }
             return colorScale(val) || map.settings.pathAttributes.stroke;
         });
@@ -1372,7 +1374,10 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
                 if (val == 'NaN') val = d[part];
                 // TODO: make option "ignoreUndefined" etc.
                 if (val !== undefined && val !== meta.undefinedValue) {
-                    html += pre + prefix + val + post;
+                    html += pre + prefix + val + ( meta.valueUnit ? ' ' + meta.valueUnit : '') + post;
+                }
+                else if (meta.undefinedLabel) {
+                    html += pre + prefix + meta.undefinedLabel + post;
                 }
             }
         }
