@@ -20,8 +20,9 @@ var version = '__VERSION__';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
-_assert(d3, "d3.js is required!");
-_assert($, "jQuery is required!");
+_assert(window.d3, "d3.js is required!");
+_assert(window.$, "jQuery is required!");
+_assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, e.g. from https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js");
 
 var default_settings = {
     locale: 'en',
