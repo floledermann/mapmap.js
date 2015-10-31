@@ -1,6 +1,4 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-
-},{}],2:[function(require,module,exports){
 /*! datadata.js © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -527,6 +525,7 @@ dd.mapreduce = function (data, map, reduce) {
     reduce = reduce || dd.emit.last(); // default
     
 	var mapEmit = function(key, value) {
+        if (key == null) return; // do not emit if key is null or undefined
 		if(!mapResult[key]) {
 			mapResult[key] = [];
 		}
@@ -641,7 +640,9 @@ dd.reverse = function(data) {
 
 module.exports = dd;
 
-},{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
+},{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
+
+},{}],3:[function(require,module,exports){
 /*! mapmap.js 0.2.6 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -664,8 +665,9 @@ var version = '0.2.6';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
-_assert(d3, "d3.js is required!");
-_assert($, "jQuery is required!");
+_assert(window.d3, "d3.js is required!");
+_assert(window.$, "jQuery is required!");
+_assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, e.g. from https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js");
 
 var default_settings = {
     locale: 'en',
@@ -700,7 +702,9 @@ var default_settings = {
         // domain:  is determined by data analysis
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
-        undefinedValue: "" //"undefined"
+        undefinedValue: "", //"undefined"
+        undefinedLabel: "undefined",
+        undefinedColor: 'transparent'
     }
 };
 
@@ -1455,6 +1459,9 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
     else {
         this.promise_data(dd(spec, options.map, options.reduce, options))
         .then(function(data) {
+            if (data.length() == 0) {
+                console.warn("Data for key '" + options.map + "' yielded no results!");
+            }
             map._elements.geometry.selectAll('path')
                 .each(function(d) {
                     if (d.properties) {
@@ -1463,7 +1470,7 @@ mapmap.prototype.data = function(spec, keyOrOptions) {
                             mapmap.extend(d.properties, data.get(k));
                         }
                         else {
-                            //console.warn("No '" + geometryKey + "' value present for " + this + "!");
+                            //console.warn("Key '" + options.geometryKey + "' not found in " + this + "!");
                         }    
                     }
                 });
@@ -1498,7 +1505,8 @@ var MetaData = function(fields, localeProvider) {
         if (!this._format) {
             this._format = this.getFormatter();
         }
-        if ((this.numberFormat && (isNaN(val) || val === undefined || val === null)) || (!this.numberFormat && !val)) {
+        // return undefined if undefined or if not a number but number formatting explicitly requested
+        if (val === undefined || val === null || (this.numberFormat && (isNaN(val)))) {
             return this.undefinedValue;
         }
         return this._format(val);
@@ -1638,7 +1646,7 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
     this.promise_data().then(function(data) {      
         map.getRepresentations(selection)
             .each(function(geom) {
-                callback.call(map, d3.select(this), geom);
+                callback.call(map, d3.select(this), geom, geom.properties);
             });
         if (finalize) finalize.call(map);
     });
@@ -1672,7 +1680,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
                 metadata = this.getMetadata(spec);
             }
             colorScale = this.autoColorScale(spec, metadata);
-            this.updateLegend(spec, metadata, colorScale, selection);
+            this.updateLegend(spec, 'fill', metadata, colorScale, selection);
         }
         if (el.attr('fill') != 'none') {
             // transition if color already set
@@ -1682,7 +1690,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             var val = valueFunc(geom.properties);
             // explicitly check if value is valid - this can be a problem with ordinal scales
             if (typeof(val) == 'undefined') {
-                val = metadata.undefinedValue; 
+                return metadata.undefinedColor || map.settings.pathAttributes.fill;
             }
             return colorScale(val) || map.settings.pathAttributes.fill;
         });
@@ -1720,7 +1728,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
                 metadata = this.getMetadata(spec);
             }
             colorScale = this.autoColorScale(spec, metadata);
-            this.updateLegend(spec, metadata, colorScale, selection);
+            this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
         }
         if (el.attr('stroke') != 'none') {
             // transition if color already set
@@ -1730,7 +1738,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
             var val = valueFunc(geom.properties);
             // explicitly check if value is valid - this can be a problem with ordinal scales
             if (typeof(val) == 'undefined') {
-                val = metadata.undefinedValue; 
+                return metadata.undefinedColor || map.settings.pathAttributes.stroke;
             }
             return colorScale(val) || map.settings.pathAttributes.stroke;
         });
@@ -1868,19 +1876,22 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40}
     }, options);
-
+    
     var bounds = repr.getBoundingClientRect();
     var pt = this._elements.main.node().createSVGPoint();
     
     pt.x = (bounds.left + bounds.right) / 2;
     pt.y = bounds.top;
     
-    var mapBounds = this.getBoundingClientRect();
+    var mapBounds = this.getBoundingClientRect(),
+        scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+        scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
+    ;
     if (options.clipToViewport) {                
-        if (pt.x < mapBounds.left + options.clipMargins.left) pt.x = mapBounds.left + options.clipMargins.left;
-        if (pt.x > mapBounds.right - options.clipMargins.right) pt.x = mapBounds.right - options.clipMargins.right;
-        if (pt.y < mapBounds.top + options.clipMargins.top) pt.y = mapBounds.top + options.clipMargins.top;
-        if (pt.y > mapBounds.bottom - options.clipMargins.bottom) pt.y = mapBounds.bottom - options.clipMargins.bottom;
+        if (pt.x < mapBounds.left - scrollLeft + options.clipMargins.left) pt.x = mapBounds.left - scrollLeft + options.clipMargins.left;
+        if (pt.x > mapBounds.right - scrollLeft - options.clipMargins.right) pt.x = mapBounds.right - scrollLeft - options.clipMargins.right;
+        if (pt.y < mapBounds.top - scrollTop + options.clipMargins.top) pt.y = mapBounds.top - scrollTop + options.clipMargins.top;
+        if (pt.y > mapBounds.bottom - scrollTop - options.clipMargins.bottom) pt.y = mapBounds.bottom - scrollTop - options.clipMargins.bottom;
     }
     pt.x -= mapBounds.left;
     pt.y -= mapBounds.top;
@@ -1894,9 +1905,13 @@ mapmap.prototype.getAnchorForMousePosition = function(event, repr, options) {
         anchorOffset: [0,-20]
      }, options);
 
+     // http://www.jacklmoore.com/notes/mouse-position/
+     var offsetX = event.layerX || event.offsetX,
+         offsetY = event.layerY || event.offsetY;
+    
     return {
-        x: event.offsetX + options.anchorOffset[0],
-        y: event.offsetY + options.anchorOffset[1]
+        x: offsetX + options.anchorOffset[0],
+        y: offsetY + options.anchorOffset[1]
     }
 }
 
@@ -1929,9 +1944,15 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
                 this.parentNode.appendChild(this);
             }
             
-            var anchor = options.anchorPosition.call(map, d3.event, this, options);
+            var el = this,
+                event = d3.event;
             
-            overCB.call(map, d.properties, anchor, this);           
+            // In Firefox the event positions are not populated properly in some cases
+            // Defer call to allow browser to populate the event
+            window.setTimeout(function(){
+                var anchor = options.anchorPosition.call(map, event, el, options);           
+                overCB.call(map, d.properties, anchor, el);   
+            }, 10);
         };
         // reset previously overridden pointer events
         for (var i=0; i<map._oldPointerEvents.length; i++) {
@@ -2012,7 +2033,10 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
                 if (val == 'NaN') val = d[part];
                 // TODO: make option "ignoreUndefined" etc.
                 if (val !== undefined && val !== meta.undefinedValue) {
-                    html += pre + prefix + val + post;
+                    html += pre + prefix + val + ( meta.valueUnit ? ' ' + meta.valueUnit : '') + post;
+                }
+                else if (meta.undefinedLabel) {
+                    html += pre + prefix + meta.undefinedLabel + post;
                 }
             }
         }
@@ -2069,14 +2093,17 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
             mainEl = this._elements.main.node(),
+            bounds = map.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-            top = mainEl.getBoundingClientRect().top + scrollTop - offsetEl.offset().top;
-                    
+            scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
+            top = bounds.top + scrollTop - offsetEl.offset().top,
+            left = bounds.left + scrollLeft - offsetEl.offset().left;
+        
         hoverEl
             .css({
                 bottom: (offsetHeight - top - point.y) + 'px',
                 //top: point.y + 'px',
-                left: point.x + 'px'
+                left: (left + point.x) + 'px'
             })
             .html(htmlFunc(d));
     }
@@ -2113,6 +2140,7 @@ mapmap.behavior.zoom = function(options) {
         ringRadius: 1.1, // relative to height/2
         zoomstart: null,
         zoomend: null,
+        center: [center.x, center.y],
         ringAttributes: {
             stroke: '#000',
             'stroke-width': 6,
@@ -2141,9 +2169,17 @@ mapmap.behavior.zoom = function(options) {
                     y: 6
                 })
                 .text('×');
-        }
+        },
+        // TODO: how should highlighting work on the map generally?
+        // maybe more like setState('highlight') and options.activestyle = 'highlight' ?
+        activate: function(el) {
+            d3.select(el).classed('active', true);
+        },
+        deactivate: function(el) {
+            if (el) d3.select(el).classed('active', false);
+        }        
     }, options);
-        
+    
     var ring = null,
         map = null,
         r, r0,
@@ -2158,11 +2194,6 @@ mapmap.behavior.zoom = function(options) {
         r = Math.min(size.height, size.width) / 2.0 * options.ringRadius;
         r0 = Math.sqrt(size.width*size.width + size.height*size.height) / 1.5;
             
-        if (!options.center) {
-            // zoom to globally set center by default
-            options.center = [center.x, center.y];
-        }
-
         if (options.cursor) {
             selection.attr({
                 cursor: options.cursor
@@ -2212,15 +2243,18 @@ mapmap.behavior.zoom = function(options) {
                 reset();
             }
             else {
+                options.deactivate(zoomed);
                 var el = this;
                 options.zoomstart && options.zoomstart.call(map, el);
                 map.zoomToSelection(this, {
                     callback: function() {
                         options.zoomend && options.zoomend.call(map, el);
                     },
-                    maxZoom: options.maxZoom
+                    maxZoom: options.maxZoom,
+                    center: options.center
                 });
                 animateRing(this);
+                options.activate(this);
                 zoomed = this;
                 map._elements.map.select('.background').on(options.event + '.zoom', reset);
             }
@@ -2239,7 +2273,8 @@ mapmap.behavior.zoom = function(options) {
             callback: function() {
                 options.zoomend && options.zoomend.call(map, selection);
             },
-            maxZoom: options.maxZoom
+            maxZoom: options.maxZoom,
+            center: options.center
         });
         animateRing(selection);
         zoomed = selection;
@@ -2265,6 +2300,7 @@ mapmap.behavior.zoom = function(options) {
         
     function reset() {
         if (map) {
+            options.deactivate(zoomed);
             zoomed = null;
             map.resetZoom();
             animateRing(null);
@@ -2379,7 +2415,8 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
     options = dd.merge({
         fitScale: 0.7,
         animationDuration: 750,
-        maxZoom: 8
+        maxZoom: 8,
+        center: [center.x, center.y]
     }, options);
 
     var sel = this.getRepresentations(selection),
@@ -2400,7 +2437,7 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
         y = (bounds[0][1] + bounds[1][1]) / 2,
         size = this.size(),
         scale = Math.min(options.maxZoom, options.fitScale / Math.max(dx / size.width, dy / size.height)),
-        translate = [size.width * center.x - scale * x, size.height * center.y - scale * y];
+        translate = [size.width * options.center[0] - scale * x, size.height * options.center[1] - scale * y];
     this.animateView(translate, scale, options.callback, options.animationDuration);
     return this;
 };
@@ -2459,6 +2496,9 @@ mapmap.prototype.applyBehavior = function(spec, selection) {
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
+        // TODO: this should be configurable via options
+        // and needs to integrate with managing pointer events (see hoverInfo)
+        sel.style('pointer-events','visiblePainted');
         if (typeof spec == 'function') {
             spec.call(map, sel);
         }
@@ -2615,7 +2655,7 @@ mapmap.prototype.legend = function(legend_func) {
     this.legend_func = legend_func;
     return this;
 }
-mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
+mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, scale, selection) {
 
     if (!this.legend_func || !scale) {
         return this;
@@ -2662,19 +2702,23 @@ mapmap.prototype.updateLegend = function(value, metadata, scale, selection) {
         thresholds = range.length;
     }
     
+    // TODO: this is calculation intensive
+    // think about an optional or more flexible coupling between legend and data!
+    
     var histogram_objects = this.getRepresentations(selection)[0];
     
     var make_histogram = d3.layout.histogram()
         .bins(thresholds)
         .value(function(d){
-            return d.__data__.properties[value];
-        })
-        // use "density" mode, giving us histogram y values in the range of [0..1]
-        .frequency(false);
+            return d.__data__.properties[attribute];
+        });
+        // use "count" mode
+        // to use "density" mode, giving us histogram y values in the range of [0..1]
+        //.frequency(false);
 
-    histogram = make_histogram(histogram_objects);
+    histogram = make_histogram(histogram_objects).reverse();
     
-    this.legend_func.call(this, value, metadata, range, labelFormat, histogram);
+    this.legend_func.call(this, attribute, reprAttribute, metadata, range, labelFormat, histogram);
                     
     return this;
 
@@ -2718,7 +2762,7 @@ mapmap.legend.html = function(options) {
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(value, metadata, range, labelFormat, histogram) {
+    return function(attribute, reprAttribute, metadata, range, labelFormat, histogram) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2729,9 +2773,9 @@ mapmap.legend.html = function(options) {
         
         legend.style(options.legendStyle);
         
-        // TODO: value may be a function, so we cannot easily generate a label for it
+        // TODO: attribute may be a function, so we cannot easily generate a label for it
         var title = legend.selectAll('h3')
-            .data([valueOrCall(metadata.label, value) || (dd.isString(value) ? value : '')]);
+            .data([valueOrCall(metadata.label, attribute) || (dd.isString(attribute) ? attribute : '')]);
             
         title.enter()
             .append('h3');
@@ -2754,17 +2798,69 @@ mapmap.legend.html = function(options) {
             .attr('class', 'legendCell')
             .style(options.cellStyle);
             
-        newcells.append('span')
-            .attr('class', 'legendColor')
-            .style(options.colorBoxStyle)
-            .append('span')
-            .attr('class', 'fill')
-            .style(options.colorFillStyle);
+        if (reprAttribute == 'fill') {
+            if (range[0].substring(0,4) != 'url(') {
+                newcells.append('span')
+                    .attr('class', 'legendColor')
+                    .style(options.colorBoxStyle)
+                    .append('span')
+                    .attr('class', 'fill')
+                    .style(options.colorFillStyle);
                     
+                cells.select('.legendColor .fill')
+                    .transition()
+                    .style({
+                        'background-color': function(d) {return d;},
+                        'border-color': function(d) {return d;},
+                        'color': function(d) {return d;}
+                    });
+            }
+            else {
+                newcells.append('svg')
+                    .attr('class', 'legendColor')
+                    .style(options.colorBoxStyle)
+                    .append('rect')
+                    .attr({
+                        width: 100,
+                        height: 100
+                    });
+                    
+                cells.select('.legendColor rect')
+                    .attr({
+                        'fill': function(d) {return d;}
+                    });
+            }
+        }
+        else if (reprAttribute == 'strokeColor') {
+        
+            newcells.append('span')
+                .attr('class', 'legendColor')
+                .style(options.colorBoxStyle)
+                .style('border', 'none')
+                .append('span')
+                .attr('class', 'fill')
+                .style(options.colorFillStyle);
+                
+            cells.select('.legendColor .fill')
+                .transition()
+                .style({
+                    'background-color': function(d) {return d;},
+                    'border-color': function(d) {return d;},
+                    'color': function(d) {return d;}
+                });
+        }
+        
         newcells.append('span')
             .attr('class','legendLabel')
             .style(options.textStyle);
+
+        cells.attr('data-count',function(d,i) {return histogram[i].y;});
         
+        cells.select('.legendLabel')
+            .text(labelFormat);
+            
+        // TODO: histogram stuff needs refactoring (see above in updateLegend)
+  
         if (options.histogram) {
 
             newcells.append('span')
@@ -2779,17 +2875,8 @@ mapmap.legend.html = function(options) {
                     return Math.round(width) + 'px';
                 });
         }
-
-        cells.select('.legendColor .fill')
-            .transition()
-            .style({
-                'background-color': function(d) {return d;},
-                'border-color': function(d) {return d;},
-                'color': function(d) {return d;}
-            });
         
-        cells.select('.legendLabel')
-            .text(labelFormat);
+        if (options.callback) options.callback();
     }
 }
 
@@ -2999,5 +3086,5 @@ function keyOrCallback(val) {
 }
 
 module.exports = mapmap;
-},{"datadata":2}]},{},[3])(3)
+},{"datadata":1}]},{},[3])(3)
 });
