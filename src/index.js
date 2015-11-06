@@ -1251,7 +1251,7 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
         scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
         scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
     ;
-    if (options.clipToViewport) {                
+    if (options.clipToViewport) {  
         if (pt.x < mapBounds.left - scrollLeft + options.clipMargins.left) pt.x = mapBounds.left - scrollLeft + options.clipMargins.left;
         if (pt.x > mapBounds.right - scrollLeft - options.clipMargins.right) pt.x = mapBounds.right - scrollLeft - options.clipMargins.right;
         if (pt.y < mapBounds.top - scrollTop + options.clipMargins.top) pt.y = mapBounds.top - scrollTop + options.clipMargins.top;
@@ -1457,12 +1457,12 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
             mainEl = this._elements.main.node(),
-            bounds = map.getBoundingClientRect(),
+            bounds = this.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
             scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
             top = bounds.top + scrollTop - offsetEl.offset().top,
             left = bounds.left + scrollLeft - offsetEl.offset().left;
-        
+
         hoverEl
             .css({
                 bottom: (offsetHeight - top - point.y) + 'px',
