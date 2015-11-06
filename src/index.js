@@ -879,6 +879,15 @@ var MetaData = function(fields, localeProvider) {
         }
         return d3.format(this.numberFormat || '.01f');
     };
+    this.getRangeFormatter = function() {
+        var fmt = this.format.bind(this);
+        return function(lower, upper, excludeLower, excludeUpper) {
+            if (localeProvider.locale && localeProvider.locale.rangeLabel) {
+                return localeProvider.locale.rangeLabel(lower, upper, fmt, excludeLower, excludeUpper);
+            }
+            return defaultRangeLabel(lower, upper, fmt, excludeLower, excludeUpper);
+        }
+    };
     return this;
 };
 
@@ -1888,16 +1897,22 @@ mapmap.prototype.on = function(eventName, handler) {
     return this;
 };
 
-function defaultRangeLabel(a, b, format, excludeLower) {
-    format = format || function(a){return a};
-    var lower = excludeLower ? '> ' : '';
-    if (isNaN(a) && !isNaN(b)) {
-        return "up to " + format(b);
+function defaultRangeLabel(lower, upper, format, excludeLower, excludeUpper) {
+    var f = format || function(lower){return lower};
+        
+    if (isNaN(lower)) {
+        if (isNaN(upper)) {
+            console.warn("rangeLabel: neither lower nor upper value specified!");
+            return "";
+        }
+        else {
+            return (excludeUpper ? "under " : "up to ") + f(upper);
+        }
     }
-    if (isNaN(b) && !isNaN(a)) {
-        return lower + format(a) + " and above";
+    if (isNaN(upper)) {
+        return excludeLower ? ("more than " + f(lower)) : (f(lower) + " and more");
     }
-    return (lower + format(a) + " to " + format(b));
+    return (excludeLower ? '> ' : '') + f(lower) + " to " + f(upper);
 }
 
 var d3_locales = {
@@ -1929,16 +1944,22 @@ var d3_locales = {
         shortDays: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
         months: ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
         shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
-        rangeLabel: function(a, b, format, excludeLower) {
-            format = format || function(a){return a};
-            var lower = excludeLower ? '> ' : '';
-            if (isNaN(a) && !isNaN(b)) {
-                return "bis zu " + format(b);
+        rangeLabel: function(lower, upper, format, excludeLower, excludeUpper) {
+            var f = format || function(lower){return lower};
+                
+            if (isNaN(lower)) {
+                if (isNaN(upper)) {
+                    console.warn("rangeLabel: neither lower nor upper value specified!");
+                    return "";
+                }
+                else {
+                    return (excludeUpper ? "unter " : "bis ") + f(upper);
+                }
             }
-            if (isNaN(b) && !isNaN(a)) {
-                return lower + format(a) + " und mehr";
+            if (isNaN(upper)) {
+                return (excludeLower ? "mehr als " + f(lower) : f(lower) + " und mehr");
             }
-            return (lower + format(a) + " bis " + format(b));
+            return (excludeLower ? '> ' : '') + f(lower) + " bis " + f(upper);
         }
     }
 };
@@ -2020,60 +2041,68 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         metadata = mapmap.getMetadata(metadata);
     }
     
-    var range = scale.range().slice(0), // clone, we might reverse() later
+    var range = scale.range(),
         labelFormat,
-        thresholds;
-        
-    var map = this;
+        classes,
+        map = this;
 
-    // set up labels and histogram bins according to scale
+    // the main distinction is:
+    // whether we have an output range divided into classes, or a continuous range
+    // in the d3 API, numeric scales with a discrete range have an invertExtent method
     if (scale.invertExtent) {
-        // for quantization scales we have invertExtent to fully specify bins
-        labelFormat = function(d,i) {
-            var extent = scale.invertExtent(d);
-            if (map.locale && map.locale.rangeLabel) {
-                return map.locale.rangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
+        //classes = [scale.invertExtent(range[0])[0]];
+        classes = range.map(function(r) {
+            var extent = scale.invertExtent(r);
+            // if we have too many items in range, both entries in extent will be undefined - ignore
+            if (extent[0] == null && extent[1] == null) {
+                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "'!");
             }
-            return defaultRangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
+            return {
+                value: r,
+                min: extent[0],
+                max: extent[1]
+            };
+        });
+        rangeFormatter = metadata.getRangeFormatter();
+        labelFormat = function(d,i) {
+            return rangeFormatter(d.min, d.max, (i<range.length-1));
         };
     }
     else {
-        // ordinal scales
+        // ordinal and continuous-range scales
+        classes = scale.range().map(function(r) {
+            return({
+                value: r,
+                datum: 0
+            });
+        });
         labelFormat = metadata.getFormatter();
     }
     
-    var histogram = null;
+    // expose histogram as a lazy function
+    
+    var map = this,
+        histogram_data = null;
+    
+    function histogram(i, relative) {
+        // lazy initialization because this could be costly
+        // if histogram data is not needed by legend, it is never calculated
+        if (histogram_data == null) {
+            var make_histogram = d3.layout.histogram()
+                .bins(classes)
+                .value(function(d){
+                    return d.__data__.properties[attribute];
+                });
+                // use "count" mode
+                // to use "density" mode, giving us histogram y values in the range of [0..1]
+                //.frequency(false);
 
-    if (scale.invertExtent) {
-        var hist_range = scale.range();
-        thresholds = [scale.invertExtent(hist_range[0])[0]];
-        for (var i=0; i<hist_range.length; i++) {
-            var extent = scale.invertExtent(hist_range[i]);
-            thresholds.push(extent[1]);
+            histogram_data = make_histogram(map.getRepresentations(selection)[0]).reverse();
         }
-    }
-    else {
-        // ordinal scales
-        thresholds = range.length;
+        return i < histogram_data.length ? histogram_data[i].y : 0;
     }
     
-    // TODO: this is calculation intensive
-    // think about an optional or more flexible coupling between legend and data!
-    
-    var histogram_objects = this.getRepresentations(selection)[0];
-    
-    var make_histogram = d3.layout.histogram()
-        .bins(thresholds)
-        .value(function(d){
-            return d.__data__.properties[attribute];
-        });
-        // use "count" mode
-        // to use "density" mode, giving us histogram y values in the range of [0..1]
-        //.frequency(false);
-
-    histogram = make_histogram(histogram_objects).reverse();
-    
-    this.legend_func.call(this, attribute, reprAttribute, metadata, range, labelFormat, histogram);
+    this.legend_func.call(this, attribute, reprAttribute, metadata, classes, labelFormat, histogram);
                     
     return this;
 
@@ -2132,11 +2161,9 @@ mapmap.legend.html = function(options) {
         var title = legend.selectAll('h3')
             .data([valueOrCall(metadata.label, attribute) || (dd.isString(attribute) ? attribute : '')]);
             
-        title.enter()
-            .append('h3');
+        title.enter().append('h3');
         
-        title
-            .html(function(d){return d;});
+        title.html(function(d){return d;});
         
         // we need highest values first for numeric scales
         if (metadata.scale != 'ordinal') {
@@ -2154,7 +2181,7 @@ mapmap.legend.html = function(options) {
             .style(options.cellStyle);
             
         if (reprAttribute == 'fill') {
-            if (range[0].substring(0,4) != 'url(') {
+            if (range[0].value.substring(0,4) != 'url(') {
                 newcells.append('span')
                     .attr('class', 'legendColor')
                     .style(options.colorBoxStyle)
@@ -2165,9 +2192,9 @@ mapmap.legend.html = function(options) {
                 cells.select('.legendColor .fill')
                     .transition()
                     .style({
-                        'background-color': function(d) {return d;},
-                        'border-color': function(d) {return d;},
-                        'color': function(d) {return d;}
+                        'background-color': function(d) {return d.value;},
+                        'border-color': function(d) {return d.value;},
+                        'color': function(d) {return d.value;}
                     });
             }
             else {
@@ -2182,7 +2209,7 @@ mapmap.legend.html = function(options) {
                     
                 cells.select('.legendColor rect')
                     .attr({
-                        'fill': function(d) {return d;}
+                        'fill': function(d) {return d.value;}
                     });
             }
         }
@@ -2199,9 +2226,9 @@ mapmap.legend.html = function(options) {
             cells.select('.legendColor .fill')
                 .transition()
                 .style({
-                    'background-color': function(d) {return d;},
-                    'border-color': function(d) {return d;},
-                    'color': function(d) {return d;}
+                    'background-color': function(d) {return d.value;},
+                    'border-color': function(d) {return d.value;},
+                    'color': function(d) {return d.value;}
                 });
         }
         
@@ -2209,7 +2236,7 @@ mapmap.legend.html = function(options) {
             .attr('class','legendLabel')
             .style(options.textStyle);
 
-        cells.attr('data-count',function(d,i) {return histogram[i].y;});
+        cells.attr('data-count',function(d,i) {return histogram(i);});
         
         cells.select('.legendLabel')
             .text(labelFormat);
@@ -2224,7 +2251,7 @@ mapmap.legend.html = function(options) {
 
             cells.select('.legendHistogramBar').transition()
                 .style('width', function(d,i){
-                    var width = (histogram[histogram.length-i-1].y * options.histogramLength);
+                    var width = (histogram(histogram.length-i-1) * options.histogramLength);
                     // always round up to make sure at least 1px wide
                     if (width > 0 && width < 1) width = 1;
                     return Math.round(width) + 'px';
