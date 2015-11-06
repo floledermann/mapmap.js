@@ -1912,7 +1912,7 @@ function defaultRangeLabel(lower, upper, format, excludeLower, excludeUpper) {
     if (isNaN(upper)) {
         return excludeLower ? ("more than " + f(lower)) : (f(lower) + " and more");
     }
-    return (excludeLower ? '> ' : '') + f(lower) + " to " + f(upper);
+    return (excludeLower ? '> ' : '') + f(lower) + " to " + (excludeUpper ? '<' : '') + f(upper);
 }
 
 var d3_locales = {
@@ -1959,7 +1959,7 @@ var d3_locales = {
             if (isNaN(upper)) {
                 return (excludeLower ? "mehr als " + f(lower) : f(lower) + " und mehr");
             }
-            return (excludeLower ? '> ' : '') + f(lower) + " bis " + f(upper);
+            return (excludeLower ? '> ' : '') + f(lower) + " bis " + (excludeUpper ? '<' : '') + f(upper);
         }
     }
 };
@@ -2051,7 +2051,7 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
     // in the d3 API, numeric scales with a discrete range have an invertExtent method
     if (scale.invertExtent) {
         //classes = [scale.invertExtent(range[0])[0]];
-        classes = range.map(function(r) {
+        classes = range.map(function(r, i) {
             var extent = scale.invertExtent(r);
             // if we have too many items in range, both entries in extent will be undefined - ignore
             if (extent[0] == null && extent[1] == null) {
@@ -2060,12 +2060,13 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
             return {
                 value: r,
                 min: extent[0],
-                max: extent[1]
+                max: extent[1],
+                includeMax: i<range.length-1
             };
         });
         rangeFormatter = metadata.getRangeFormatter();
         labelFormat = function(d,i) {
-            return rangeFormatter(d.min, d.max, (i<range.length-1));
+            return rangeFormatter(d.min, d.max, false, d.includeMax);
         };
     }
     else {
