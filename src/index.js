@@ -963,7 +963,7 @@ function properties_accessor(func) {
     };
 }
 
-mapmap.prototype.autoColorScale = function(value, metadata) {
+mapmap.prototype.autoColorScale = function(value, metadata, selection) {
     
     if (!metadata) {
         metadata = this.getMetadata(value);
@@ -973,7 +973,7 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
     }
     
     if (!metadata.domain) {
-        var stats = getStats(this._elements.geometry.selectAll('path'), properties_accessor(keyOrCallback(value)));
+        var stats = getStats(this.getRepresentations(selection), properties_accessor(keyOrCallback(value)));
         
         if (stats.anyNegative && stats.anyPositive) {
             // make symmetrical
@@ -1043,7 +1043,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             if (!metadata) {
                 metadata = this.getMetadata(spec);
             }
-            colorScale = this.autoColorScale(spec, metadata);
+            colorScale = this.autoColorScale(spec, metadata, selection);
             this.updateLegend(spec, 'fill', metadata, colorScale, selection);
         }
         if (el.attr('fill') != 'none') {
@@ -1091,7 +1091,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
             if (!metadata) {
                 metadata = this.getMetadata(spec);
             }
-            colorScale = this.autoColorScale(spec, metadata);
+            colorScale = this.autoColorScale(spec, metadata, selection);
             this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
         }
         if (el.attr('stroke') != 'none') {
