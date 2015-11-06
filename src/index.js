@@ -2073,11 +2073,13 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         // ordinal and continuous-range scales
         classes = scale.range().map(function(r) {
             return({
-                value: r,
-                datum: 0
+                value: r
             });
         });
-        labelFormat = metadata.getFormatter();
+        labelFormatter = metadata.getFormatter();
+        labelFormat = function(d,i) {
+            return labelFormatter(d.value);
+        };
     }
     
     // expose histogram as a lazy function
