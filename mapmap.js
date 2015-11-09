@@ -703,7 +703,7 @@ var default_settings = {
         scale: 'quantize',
         colors: ["#ffffcc","#c7e9b4","#7fcdbb","#41b6c4","#2c7fb8","#253494"], // Colorbrewer YlGnBu[6] 
         undefinedValue: "", //"undefined"
-        undefinedLabel: "undefined",
+        //undefinedLabel: -> from locale
         undefinedColor: 'transparent'
     }
 };
@@ -1501,6 +1501,9 @@ var MetaData = function(fields, localeProvider) {
     // ensure constructor invocation
     if (!(this instanceof MetaData)) return new MetaData(fields, localeProvider);
     mapmap.extend(this, fields);
+    // take default from locale
+    if (!this.undefinedLabel) this.undefinedLabel = localeProvider.locale.undefinedLabel;
+    
     this.format = function(val) {
         if (!this._format) {
             this._format = this.getFormatter();
@@ -2583,7 +2586,8 @@ var d3_locales = {
         shortDays: [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ],
         months: [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ],
         shortMonths: [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ],
-        rangeLabel: defaultRangeLabel
+        rangeLabel: defaultRangeLabel,
+        undefinedLabel: "no data"
     },
     'de': {
         decimal: ",",
@@ -2614,7 +2618,8 @@ var d3_locales = {
                 return (excludeLower ? "mehr als " + f(lower) : f(lower) + " und mehr");
             }
             return (excludeLower ? '> ' : '') + f(lower) + " bis " + (excludeUpper ? '<' : '') + f(upper);
-        }
+        },
+        undefinedLabel: "keine Daten"
     }
 };
 
@@ -2634,9 +2639,17 @@ mapmap.prototype.setLocale = function(lang){
         locale = lang;
     }
     this.locale = d3.locale(locale);
-    // HACK: we cannot extend d3 locale properly
-    this.locale.rangeLabel = locale.rangeLabel;
     
+    // D3's locale doesn't support extended attributes,
+    // so copy them over manually
+    var keys = Object.keys(locale);
+    for (var i=0; i<keys.length; i++) {
+        var key = keys[i];
+        if (!this.locale[key]) {
+            this.locale[key] = locale[key];
+        }
+    }
+
     return this;
 }
 
@@ -2772,7 +2785,18 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         });
     }
     
-    this.legend_func.call(this, attribute, reprAttribute, metadata, classes);
+    var undefinedClass = null;
+    // TODO: hack to get undefined color box
+    if (reprAttribute == 'fill' && metadata.undefinedColor != 'transparent') {
+        undefinedClass = {
+            representation: metadata.undefinedColor,
+            'class': 'undefined',
+            count: counter(metadata.undefinedColor),
+            objects: objects(metadata.undefinedColor)
+        };
+    }
+    
+    this.legend_func.call(this, attribute, reprAttribute, metadata, classes, undefinedClass);
                     
     return this;
 
@@ -2826,7 +2850,7 @@ mapmap.legend.html = function(options) {
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(attribute, reprAttribute, metadata, range) {
+    return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2847,11 +2871,14 @@ mapmap.legend.html = function(options) {
         
         // we need highest values first for numeric scales
         if (metadata.scale != 'ordinal') {
-            range.reverse();
+            classes.reverse();
+        }
+        if (undefinedClass) {
+            classes.push(undefinedClass);
         }
         
         var cells = legend.selectAll('div.legendCell')
-            .data(range);
+            .data(classes);
         
         cells.exit().remove();
         
@@ -2859,9 +2886,15 @@ mapmap.legend.html = function(options) {
             .append('div')
             .attr('class', 'legendCell')
             .style(options.cellStyle);
-            
+        
+        cells.each(function(d) {
+            if (d.class) {
+                d3.select(this).classed(d.class, true);
+            }
+        });
+        
         if (reprAttribute == 'fill') {
-            if (range[0].representation.substring(0,4) != 'url(') {
+            if (classes[0].representation.substring(0,4) != 'url(') {
                 newcells.append('span')
                     .attr('class', 'legendColor')
                     .style(options.colorBoxStyle)
