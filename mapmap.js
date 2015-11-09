@@ -1,4 +1,6 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+
+},{}],2:[function(require,module,exports){
 /*! datadata.js © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -640,9 +642,7 @@ dd.reverse = function(data) {
 
 module.exports = dd;
 
-},{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
-
-},{}],3:[function(require,module,exports){
+},{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
 /*! mapmap.js 0.2.6 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -1524,6 +1524,15 @@ var MetaData = function(fields, localeProvider) {
         }
         return d3.format(this.numberFormat || '.01f');
     };
+    this.getRangeFormatter = function() {
+        var fmt = this.format.bind(this);
+        return function(lower, upper, excludeLower, excludeUpper) {
+            if (localeProvider.locale && localeProvider.locale.rangeLabel) {
+                return localeProvider.locale.rangeLabel(lower, upper, fmt, excludeLower, excludeUpper);
+            }
+            return defaultRangeLabel(lower, upper, fmt, excludeLower, excludeUpper);
+        }
+    };
     return this;
 };
 
@@ -1599,7 +1608,7 @@ function properties_accessor(func) {
     };
 }
 
-mapmap.prototype.autoColorScale = function(value, metadata) {
+mapmap.prototype.autoColorScale = function(value, metadata, selection) {
     
     if (!metadata) {
         metadata = this.getMetadata(value);
@@ -1609,7 +1618,7 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
     }
     
     if (!metadata.domain) {
-        var stats = getStats(this._elements.geometry.selectAll('path'), properties_accessor(keyOrCallback(value)));
+        var stats = getStats(this.getRepresentations(selection), properties_accessor(keyOrCallback(value)));
         
         if (stats.anyNegative && stats.anyPositive) {
             // make symmetrical
@@ -1622,6 +1631,15 @@ mapmap.prototype.autoColorScale = function(value, metadata) {
     // support d3 scales out of the box
     var scale = d3.scale[metadata.scale]();
     scale.domain(metadata.domain).range(metadata.color || metadata.colors)
+    
+    if (metadata.scale == 'ordinal' && !scale.invert) {
+        // d3 ordinal scales don't provide invert method, so patch one here
+        // https://github.com/mbostock/d3/pull/598
+        scale.invert = function(x) {
+            var i = scale.range().indexOf(x);
+            return (i > -1) ? metadata.domain[i] : null;
+        }
+    }
     
     return scale;    
 };
@@ -1679,7 +1697,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             if (!metadata) {
                 metadata = this.getMetadata(spec);
             }
-            colorScale = this.autoColorScale(spec, metadata);
+            colorScale = this.autoColorScale(spec, metadata, selection);
             this.updateLegend(spec, 'fill', metadata, colorScale, selection);
         }
         if (el.attr('fill') != 'none') {
@@ -1727,7 +1745,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
             if (!metadata) {
                 metadata = this.getMetadata(spec);
             }
-            colorScale = this.autoColorScale(spec, metadata);
+            colorScale = this.autoColorScale(spec, metadata, selection);
             this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
         }
         if (el.attr('stroke') != 'none') {
@@ -1887,7 +1905,7 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
         scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
         scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
     ;
-    if (options.clipToViewport) {                
+    if (options.clipToViewport) {  
         if (pt.x < mapBounds.left - scrollLeft + options.clipMargins.left) pt.x = mapBounds.left - scrollLeft + options.clipMargins.left;
         if (pt.x > mapBounds.right - scrollLeft - options.clipMargins.right) pt.x = mapBounds.right - scrollLeft - options.clipMargins.right;
         if (pt.y < mapBounds.top - scrollTop + options.clipMargins.top) pt.y = mapBounds.top - scrollTop + options.clipMargins.top;
@@ -2093,12 +2111,12 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         var offsetEl = hoverEl.offsetParent(),
             offsetHeight = offsetEl.outerHeight(false),
             mainEl = this._elements.main.node(),
-            bounds = map.getBoundingClientRect(),
+            bounds = this.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
             scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
             top = bounds.top + scrollTop - offsetEl.offset().top,
             left = bounds.left + scrollLeft - offsetEl.offset().left;
-        
+
         hoverEl
             .css({
                 bottom: (offsetHeight - top - point.y) + 'px',
@@ -2533,16 +2551,22 @@ mapmap.prototype.on = function(eventName, handler) {
     return this;
 };
 
-function defaultRangeLabel(a, b, format, excludeLower) {
-    format = format || function(a){return a};
-    var lower = excludeLower ? '> ' : '';
-    if (isNaN(a) && !isNaN(b)) {
-        return "up to " + format(b);
+function defaultRangeLabel(lower, upper, format, excludeLower, excludeUpper) {
+    var f = format || function(lower){return lower};
+        
+    if (isNaN(lower)) {
+        if (isNaN(upper)) {
+            console.warn("rangeLabel: neither lower nor upper value specified!");
+            return "";
+        }
+        else {
+            return (excludeUpper ? "under " : "up to ") + f(upper);
+        }
     }
-    if (isNaN(b) && !isNaN(a)) {
-        return lower + format(a) + " and above";
+    if (isNaN(upper)) {
+        return excludeLower ? ("more than " + f(lower)) : (f(lower) + " and more");
     }
-    return (lower + format(a) + " to " + format(b));
+    return (excludeLower ? '> ' : '') + f(lower) + " to " + (excludeUpper ? '<' : '') + f(upper);
 }
 
 var d3_locales = {
@@ -2574,16 +2598,22 @@ var d3_locales = {
         shortDays: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
         months: ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
         shortMonths: ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
-        rangeLabel: function(a, b, format, excludeLower) {
-            format = format || function(a){return a};
-            var lower = excludeLower ? '> ' : '';
-            if (isNaN(a) && !isNaN(b)) {
-                return "bis zu " + format(b);
+        rangeLabel: function(lower, upper, format, excludeLower, excludeUpper) {
+            var f = format || function(lower){return lower};
+                
+            if (isNaN(lower)) {
+                if (isNaN(upper)) {
+                    console.warn("rangeLabel: neither lower nor upper value specified!");
+                    return "";
+                }
+                else {
+                    return (excludeUpper ? "unter " : "bis ") + f(upper);
+                }
             }
-            if (isNaN(b) && !isNaN(a)) {
-                return lower + format(a) + " und mehr";
+            if (isNaN(upper)) {
+                return (excludeLower ? "mehr als " + f(lower) : f(lower) + " und mehr");
             }
-            return (lower + format(a) + " bis " + format(b));
+            return (excludeLower ? '> ' : '') + f(lower) + " bis " + (excludeUpper ? '<' : '') + f(upper);
         }
     }
 };
@@ -2665,60 +2695,84 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         metadata = mapmap.getMetadata(metadata);
     }
     
-    var range = scale.range().slice(0), // clone, we might reverse() later
-        labelFormat,
-        thresholds;
-        
-    var map = this;
+    var range = scale.range(),
+        classes,
+        map = this; 
 
-    // set up labels and histogram bins according to scale
-    if (scale.invertExtent) {
-        // for quantization scales we have invertExtent to fully specify bins
-        labelFormat = function(d,i) {
-            var extent = scale.invertExtent(d);
-            if (map.locale && map.locale.rangeLabel) {
-                return map.locale.rangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
+    var histogram = (function() {
+        var data = null;
+        return function(value) {
+            // lazy initialization of histogram
+            if (data == null) {
+                data = {};
+                var reprs = map.getRepresentations(selection)[0];
+                reprs.forEach(function(repr) {
+                    var val = scale(repr.__data__.properties[attribute]);
+                    if (!data[val]) {
+                        data[val] = [repr];
+                    }
+                    else {
+                        data[val].push(repr);
+                    }
+                });
             }
-            return defaultRangeLabel(extent[0], extent[1], metadata.format.bind(metadata), (i<range.length-1));
-        };
-    }
-    else {
-        // ordinal scales
-        labelFormat = metadata.getFormatter();
-    }
-    
-    var histogram = null;
-
-    if (scale.invertExtent) {
-        var hist_range = scale.range();
-        thresholds = [scale.invertExtent(hist_range[0])[0]];
-        for (var i=0; i<hist_range.length; i++) {
-            var extent = scale.invertExtent(hist_range[i]);
-            thresholds.push(extent[1]);
+            return data[value] || [];
         }
+    })();
+    
+    function counter(r) {
+        return function() {
+            return histogram(r).length;
+        }
+    }   
+    
+    function objects(r) {
+        return function() {
+            return histogram(r);
+        }
+    }   
+    
+    // the main distinction is:
+    // whether we have an output range divided into classes, or a continuous range
+    // in the d3 API, numeric scales with a discrete range have an invertExtent method
+    if (scale.invertExtent) {
+        //classes = [scale.invertExtent(range[0])[0]];
+        classes = range.map(function(r, i) {
+            var extent = scale.invertExtent(r);
+            // if we have too many items in range, both entries in extent will be undefined - ignore
+            if (extent[0] == null && extent[1] == null) {
+                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "'!");
+            }
+            return {
+                representation: r,
+                valueRange: extent,
+                includeLower: false,
+                includeUpper: i<range.length-1,
+                // lazy accessors - processing intensive
+                count: counter(r),
+                objects: objects(r)
+                //TODO: other / more general aggregations?
+            };
+        });
     }
     else {
-        // ordinal scales
-        thresholds = range.length;
+        // ordinal and continuous-range scales
+        classes = range.map(function(r, i) {
+            var value = undefined;
+            if (scale.invert) {
+                value = scale.invert(r);
+            }
+            return({
+                representation: r,
+                value: value,
+                // lazy accessors - processing intensive
+                count: counter(r),  
+                objects: objects(r)
+            });
+        });
     }
     
-    // TODO: this is calculation intensive
-    // think about an optional or more flexible coupling between legend and data!
-    
-    var histogram_objects = this.getRepresentations(selection)[0];
-    
-    var make_histogram = d3.layout.histogram()
-        .bins(thresholds)
-        .value(function(d){
-            return d.__data__.properties[attribute];
-        });
-        // use "count" mode
-        // to use "density" mode, giving us histogram y values in the range of [0..1]
-        //.frequency(false);
-
-    histogram = make_histogram(histogram_objects).reverse();
-    
-    this.legend_func.call(this, attribute, reprAttribute, metadata, range, labelFormat, histogram);
+    this.legend_func.call(this, attribute, reprAttribute, metadata, classes);
                     
     return this;
 
@@ -2756,13 +2810,23 @@ mapmap.legend.html = function(options) {
             'border-style': 'solid',
             'border-color': '#ffffff'
         },
-        histogramBarStyle: {},
-        textStyle: {}
+        labelStyle: {},
+        histogramBarStyle: {
+            'display': 'inline-block',
+            height: '1.1em',
+            'font-size': '0.8em',
+            'vertical-align': '0.1em',
+            color: '#999999',
+            'background-color': '#dddddd'
+        },
+        histogramBarWidth: function(count) {
+            return count;
+        }
     };
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(attribute, reprAttribute, metadata, range, labelFormat, histogram) {
+    return function(attribute, reprAttribute, metadata, range) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2777,11 +2841,9 @@ mapmap.legend.html = function(options) {
         var title = legend.selectAll('h3')
             .data([valueOrCall(metadata.label, attribute) || (dd.isString(attribute) ? attribute : '')]);
             
-        title.enter()
-            .append('h3');
+        title.enter().append('h3');
         
-        title
-            .html(function(d){return d;});
+        title.html(function(d){return d;});
         
         // we need highest values first for numeric scales
         if (metadata.scale != 'ordinal') {
@@ -2799,7 +2861,7 @@ mapmap.legend.html = function(options) {
             .style(options.cellStyle);
             
         if (reprAttribute == 'fill') {
-            if (range[0].substring(0,4) != 'url(') {
+            if (range[0].representation.substring(0,4) != 'url(') {
                 newcells.append('span')
                     .attr('class', 'legendColor')
                     .style(options.colorBoxStyle)
@@ -2810,9 +2872,9 @@ mapmap.legend.html = function(options) {
                 cells.select('.legendColor .fill')
                     .transition()
                     .style({
-                        'background-color': function(d) {return d;},
-                        'border-color': function(d) {return d;},
-                        'color': function(d) {return d;}
+                        'background-color': function(d) {return d.representation;},
+                        'border-color': function(d) {return d.representation;},
+                        'color': function(d) {return d.representation;}
                     });
             }
             else {
@@ -2827,7 +2889,7 @@ mapmap.legend.html = function(options) {
                     
                 cells.select('.legendColor rect')
                     .attr({
-                        'fill': function(d) {return d;}
+                        'fill': function(d) {return d.representation;}
                     });
             }
         }
@@ -2844,23 +2906,34 @@ mapmap.legend.html = function(options) {
             cells.select('.legendColor .fill')
                 .transition()
                 .style({
-                    'background-color': function(d) {return d;},
-                    'border-color': function(d) {return d;},
-                    'color': function(d) {return d;}
+                    'background-color': function(d) {return d.representation;},
+                    'border-color': function(d) {return d.representation;},
+                    'color': function(d) {return d.representation;}
                 });
         }
         
         newcells.append('span')
             .attr('class','legendLabel')
-            .style(options.textStyle);
+            .style(options.labelStyle);
 
-        cells.attr('data-count',function(d,i) {return histogram[i].y;});
+        cells.attr('data-count',function(d) {return d.count();});
         
         cells.select('.legendLabel')
-            .text(labelFormat);
+            .text(function(d) {
+                var formatter;
+                // TODO: we need some way of finding out whether we have intervals or values from the metadata
+                // to cache the label formatter
+                if (d.valueRange) {
+                    formatter = metadata.getRangeFormatter();
+                    return formatter(d.valueRange[0], d.valueRange[1], d.includeLower, d.includeUpper);
+                }
+                if (d.value) {
+                    formatter = metadata.getFormatter();
+                    return formatter(d.value);
+                }
+                return metadata.undefinedLabel;
+            });
             
-        // TODO: histogram stuff needs refactoring (see above in updateLegend)
-  
         if (options.histogram) {
 
             newcells.append('span')
@@ -2868,12 +2941,18 @@ mapmap.legend.html = function(options) {
                 .style(options.histogramBarStyle);
 
             cells.select('.legendHistogramBar').transition()
-                .style('width', function(d,i){
-                    var width = (histogram[histogram.length-i-1].y * options.histogramLength);
+                .style('width', function(d){
+                    var width = options.histogramBarWidth(d.count());
+                    // string returned? -> use unchanged
+                    if (width.length && width.indexOf('px') == width.lenght - 2) {
+                        return width;
+                    }
+                    // pixel values -> clamp and round
                     // always round up to make sure at least 1px wide
                     if (width > 0 && width < 1) width = 1;
                     return Math.round(width) + 'px';
-                });
+                })
+                .text(function(d) { return ' ' + d.count(); });
         }
         
         if (options.callback) options.callback();
@@ -3086,5 +3165,5 @@ function keyOrCallback(val) {
 }
 
 module.exports = mapmap;
-},{"datadata":1}]},{},[3])(3)
+},{"datadata":2}]},{},[3])(3)
 });

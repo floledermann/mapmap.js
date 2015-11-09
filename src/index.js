@@ -987,6 +987,15 @@ mapmap.prototype.autoColorScale = function(value, metadata, selection) {
     var scale = d3.scale[metadata.scale]();
     scale.domain(metadata.domain).range(metadata.color || metadata.colors)
     
+    if (metadata.scale == 'ordinal' && !scale.invert) {
+        // d3 ordinal scales don't provide invert method, so patch one here
+        // https://github.com/mbostock/d3/pull/598
+        scale.invert = function(x) {
+            var i = scale.range().indexOf(x);
+            return (i > -1) ? metadata.domain[i] : null;
+        }
+    }
+    
     return scale;    
 };
 
@@ -2042,10 +2051,42 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
     }
     
     var range = scale.range(),
-        labelFormat,
         classes,
-        map = this;
+        map = this; 
 
+    var histogram = (function() {
+        var data = null;
+        return function(value) {
+            // lazy initialization of histogram
+            if (data == null) {
+                data = {};
+                var reprs = map.getRepresentations(selection)[0];
+                reprs.forEach(function(repr) {
+                    var val = scale(repr.__data__.properties[attribute]);
+                    if (!data[val]) {
+                        data[val] = [repr];
+                    }
+                    else {
+                        data[val].push(repr);
+                    }
+                });
+            }
+            return data[value] || [];
+        }
+    })();
+    
+    function counter(r) {
+        return function() {
+            return histogram(r).length;
+        }
+    }   
+    
+    function objects(r) {
+        return function() {
+            return histogram(r);
+        }
+    }   
+    
     // the main distinction is:
     // whether we have an output range divided into classes, or a continuous range
     // in the d3 API, numeric scales with a discrete range have an invertExtent method
@@ -2058,54 +2099,35 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
                 console.warn("range for " + metadata.key + " contains superfluous value '" + r + "'!");
             }
             return {
-                value: r,
-                min: extent[0],
-                max: extent[1],
-                includeMax: i<range.length-1
+                representation: r,
+                valueRange: extent,
+                includeLower: false,
+                includeUpper: i<range.length-1,
+                // lazy accessors - processing intensive
+                count: counter(r),
+                objects: objects(r)
+                //TODO: other / more general aggregations?
             };
         });
-        rangeFormatter = metadata.getRangeFormatter();
-        labelFormat = function(d,i) {
-            return rangeFormatter(d.min, d.max, false, d.includeMax);
-        };
     }
     else {
         // ordinal and continuous-range scales
-        classes = scale.range().map(function(r) {
+        classes = range.map(function(r, i) {
+            var value = undefined;
+            if (scale.invert) {
+                value = scale.invert(r);
+            }
             return({
-                value: r
+                representation: r,
+                value: value,
+                // lazy accessors - processing intensive
+                count: counter(r),  
+                objects: objects(r)
             });
         });
-        labelFormatter = metadata.getFormatter();
-        labelFormat = function(d,i) {
-            return labelFormatter(d.value);
-        };
     }
     
-    // expose histogram as a lazy function
-    
-    var map = this,
-        histogram_data = null;
-    
-    function histogram(i, relative) {
-        // lazy initialization because this could be costly
-        // if histogram data is not needed by legend, it is never calculated
-        if (histogram_data == null) {
-            var make_histogram = d3.layout.histogram()
-                .bins(classes)
-                .value(function(d){
-                    return d.__data__.properties[attribute];
-                });
-                // use "count" mode
-                // to use "density" mode, giving us histogram y values in the range of [0..1]
-                //.frequency(false);
-
-            histogram_data = make_histogram(map.getRepresentations(selection)[0]).reverse();
-        }
-        return i < histogram_data.length ? histogram_data[i].y : 0;
-    }
-    
-    this.legend_func.call(this, attribute, reprAttribute, metadata, classes, labelFormat, histogram);
+    this.legend_func.call(this, attribute, reprAttribute, metadata, classes);
                     
     return this;
 
@@ -2143,13 +2165,23 @@ mapmap.legend.html = function(options) {
             'border-style': 'solid',
             'border-color': '#ffffff'
         },
-        histogramBarStyle: {},
-        textStyle: {}
+        labelStyle: {},
+        histogramBarStyle: {
+            'display': 'inline-block',
+            height: '1.1em',
+            'font-size': '0.8em',
+            'vertical-align': '0.1em',
+            color: '#999999',
+            'background-color': '#dddddd'
+        },
+        histogramBarWidth: function(count) {
+            return count;
+        }
     };
     
     options = mapmap.extend(DEFAULTS, options);
     
-    return function(attribute, reprAttribute, metadata, range, labelFormat, histogram) {
+    return function(attribute, reprAttribute, metadata, range) {
     
         var legend = this._elements.parent.find('.' + options.legendClassName);
         if (legend.length == 0) {
@@ -2184,7 +2216,7 @@ mapmap.legend.html = function(options) {
             .style(options.cellStyle);
             
         if (reprAttribute == 'fill') {
-            if (range[0].value.substring(0,4) != 'url(') {
+            if (range[0].representation.substring(0,4) != 'url(') {
                 newcells.append('span')
                     .attr('class', 'legendColor')
                     .style(options.colorBoxStyle)
@@ -2195,9 +2227,9 @@ mapmap.legend.html = function(options) {
                 cells.select('.legendColor .fill')
                     .transition()
                     .style({
-                        'background-color': function(d) {return d.value;},
-                        'border-color': function(d) {return d.value;},
-                        'color': function(d) {return d.value;}
+                        'background-color': function(d) {return d.representation;},
+                        'border-color': function(d) {return d.representation;},
+                        'color': function(d) {return d.representation;}
                     });
             }
             else {
@@ -2212,7 +2244,7 @@ mapmap.legend.html = function(options) {
                     
                 cells.select('.legendColor rect')
                     .attr({
-                        'fill': function(d) {return d.value;}
+                        'fill': function(d) {return d.representation;}
                     });
             }
         }
@@ -2229,23 +2261,34 @@ mapmap.legend.html = function(options) {
             cells.select('.legendColor .fill')
                 .transition()
                 .style({
-                    'background-color': function(d) {return d.value;},
-                    'border-color': function(d) {return d.value;},
-                    'color': function(d) {return d.value;}
+                    'background-color': function(d) {return d.representation;},
+                    'border-color': function(d) {return d.representation;},
+                    'color': function(d) {return d.representation;}
                 });
         }
         
         newcells.append('span')
             .attr('class','legendLabel')
-            .style(options.textStyle);
+            .style(options.labelStyle);
 
-        cells.attr('data-count',function(d,i) {return histogram(i);});
+        cells.attr('data-count',function(d) {return d.count();});
         
         cells.select('.legendLabel')
-            .text(labelFormat);
+            .text(function(d) {
+                var formatter;
+                // TODO: we need some way of finding out whether we have intervals or values from the metadata
+                // to cache the label formatter
+                if (d.valueRange) {
+                    formatter = metadata.getRangeFormatter();
+                    return formatter(d.valueRange[0], d.valueRange[1], d.includeLower, d.includeUpper);
+                }
+                if (d.value) {
+                    formatter = metadata.getFormatter();
+                    return formatter(d.value);
+                }
+                return metadata.undefinedLabel;
+            });
             
-        // TODO: histogram stuff needs refactoring (see above in updateLegend)
-  
         if (options.histogram) {
 
             newcells.append('span')
@@ -2253,12 +2296,18 @@ mapmap.legend.html = function(options) {
                 .style(options.histogramBarStyle);
 
             cells.select('.legendHistogramBar').transition()
-                .style('width', function(d,i){
-                    var width = (histogram(histogram.length-i-1) * options.histogramLength);
+                .style('width', function(d){
+                    var width = options.histogramBarWidth(d.count());
+                    // string returned? -> use unchanged
+                    if (width.length && width.indexOf('px') == width.lenght - 2) {
+                        return width;
+                    }
+                    // pixel values -> clamp and round
                     // always round up to make sure at least 1px wide
                     if (width > 0 && width < 1) width = 1;
                     return Math.round(width) + 'px';
-                });
+                })
+                .text(function(d) { return ' ' + d.count(); });
         }
         
         if (options.callback) options.callback();
