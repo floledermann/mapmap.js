@@ -1,11 +1,18 @@
 # mapmap.js Changelog
 
-## 0.2.7
+## Upcoming (0.2.7) / master branch
 
-- new metadata fields `valueUnit`, `undefinedLabel` and `undefinedColor` (See [documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation#metadata-fields)).
+- Greatly improved handling of missing, empty or invalid values (#23)
+- Internal changes to legend generation code to make it more versatile, improve labeling of ranges on the way (#11, #22)
+- Optional generation of histogram in HTML legend
+- Remove dead code for SVG legend, should be recreated in the future 
+- New metadata fields `valueUnit`, `undefinedLabel` and `undefinedColor` (See [documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation#metadata-fields)).
 - Improved positioning of hoverInfo (tooltips) when scrolled, fixed obscure Firefox bug for positioning them.
+- Warn if mapReduce transformation yielded no results
+- Provide `activate` and `deactivate` functions for zoom behavior to style active element
 - Fix bug causing zoom behavior to fail if no hoverInfo was active (#18)
-- Internal changes to legend generation code to make it more versatile
+- Fix usage of `center` option for zoom behavior
+- Output warning message if Promise is missing (e.g. IE) and needs to be polyfilled
 
 ## 0.2.6
 
