@@ -61,10 +61,22 @@ function rowFileHandler(loader) {
             accessor: function(d) {
                 var keys = Object.keys(d);
                 for (var i=0; i<keys.length; i++) {
-                    var key = keys[i];
+                    var key = keys[i],
+                        val = d[key];
+                    // CSV doesn't support specification of null values
+                    // interpret empty field values as missing
+                    if (val === "") {
+                        d[key] = null;
+                    }
                     // convert to number if it looks like a number
-                    if (!isNaN(+d[key])) {
-                        d[key] = +d[key];
+                    // +"" => 0
+                    // parseInt("") => NaN
+                    // parseInt("123OK") => 123
+                    // +"123OK" => NaN
+                    // so we need to pass both to be strict
+                    else if (!isNaN(+val) && !isNaN(parseInt(val))) {
+                        // unary + converts both ints and floats correctly
+                        d[key] = +val;
                     }
                 }
                 return d;
@@ -183,7 +195,7 @@ dd.registerFileHandler = registerFileHandler;
 dd.rowFileHandler = rowFileHandler;
 
 // simple load function, returns a promise for data without map/reduce-ing
-// DO NOT USE - present only for legacy reasons
+// DO NOT USE - present only for mapmap.js legacy reasons
 dd.load = function(spec, key) {
     if (spec.then && typeof spec.then === 'function') {
         // already a thenable / promise
@@ -205,26 +217,7 @@ dd.load = function(spec, key) {
             });
         }
         else {
-            return new Promise(function(resolve, reject) {
-                d3.csv(spec, function(row) {
-                    var keys = Object.keys(row);
-                    for (var i=0; i<keys.length; i++) {
-                        var key = keys[i];
-                        if (!isNaN(+row[key])) { // in JavaScript, NaN !== NaN !!!
-                            // convert to number if number
-                            row[key] = +row[key];
-                        }
-                    }
-                    return row;
-                },
-                function(error, data) {
-                    if (error) {
-                        reject(error);
-                        return;
-                    }
-                    resolve(data);                    
-                });
-            });
+            console.warn("Unknown extension: " + ext);
         }
     }
 };
@@ -727,7 +720,7 @@ var mapmap = function(element, options) {
     //this.identify_func = identify_layer;
     this.identify_func = identify_by_properties();
     
-    this.metadata_specs = [];   
+    this.metadata_specs = [];
 
     // convert seletor expression to node
     element = d3.select(element).node();
@@ -1709,8 +1702,8 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
         }
         el.attr('fill', function(geom) {           
             var val = valueFunc(geom.properties);
-            // explicitly check if value is valid - this can be a problem with ordinal scales
-            if (typeof(val) == 'undefined') {
+            // check if value is undefined or null
+            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
                 return metadata.undefinedColor || map.settings.pathAttributes.fill;
             }
             return colorScale(val) || map.settings.pathAttributes.fill;
@@ -1757,8 +1750,8 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
         }
         el.attr('stroke', function(geom) {           
             var val = valueFunc(geom.properties);
-            // explicitly check if value is valid - this can be a problem with ordinal scales
-            if (typeof(val) == 'undefined') {
+            // check if value is undefined or null
+            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
                 return metadata.undefinedColor || map.settings.pathAttributes.stroke;
             }
             return colorScale(val) || map.settings.pathAttributes.stroke;
@@ -2720,7 +2713,15 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
                 data = {};
                 var reprs = map.getRepresentations(selection)[0];
                 reprs.forEach(function(repr) {
-                    var val = scale(repr.__data__.properties[attribute]);
+                    var val = repr.__data__.properties[attribute];
+                    // make a separate bin for null/undefined values
+                    // values are also invalid if numeric scale and non-numeric value
+                    if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
+                        val = null;
+                    }
+                    else {
+                        val = scale(val);
+                    }
                     if (!data[val]) {
                         data[val] = [repr];
                     }
@@ -2754,7 +2755,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
             var extent = scale.invertExtent(r);
             // if we have too many items in range, both entries in extent will be undefined - ignore
             if (extent[0] == null && extent[1] == null) {
-                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "'!");
+                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "' - ignoring!");
+                return null;
             }
             return {
                 representation: r,
@@ -2766,7 +2768,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
                 objects: objects(r)
                 //TODO: other / more general aggregations?
             };
-        });
+        })
+        .filter(function(d){return d;});
     }
     else {
         // ordinal and continuous-range scales
@@ -2791,8 +2794,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         undefinedClass = {
             representation: metadata.undefinedColor,
             'class': 'undefined',
-            count: counter(metadata.undefinedColor),
-            objects: objects(metadata.undefinedColor)
+            count: counter(null),
+            objects: objects(null)
         };
     }
     

@@ -82,7 +82,7 @@ var mapmap = function(element, options) {
     //this.identify_func = identify_layer;
     this.identify_func = identify_by_properties();
     
-    this.metadata_specs = [];   
+    this.metadata_specs = [];
 
     // convert seletor expression to node
     element = d3.select(element).node();
@@ -1064,8 +1064,8 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
         }
         el.attr('fill', function(geom) {           
             var val = valueFunc(geom.properties);
-            // explicitly check if value is valid - this can be a problem with ordinal scales
-            if (typeof(val) == 'undefined') {
+            // check if value is undefined or null
+            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
                 return metadata.undefinedColor || map.settings.pathAttributes.fill;
             }
             return colorScale(val) || map.settings.pathAttributes.fill;
@@ -1112,8 +1112,8 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
         }
         el.attr('stroke', function(geom) {           
             var val = valueFunc(geom.properties);
-            // explicitly check if value is valid - this can be a problem with ordinal scales
-            if (typeof(val) == 'undefined') {
+            // check if value is undefined or null
+            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
                 return metadata.undefinedColor || map.settings.pathAttributes.stroke;
             }
             return colorScale(val) || map.settings.pathAttributes.stroke;
@@ -2075,7 +2075,15 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
                 data = {};
                 var reprs = map.getRepresentations(selection)[0];
                 reprs.forEach(function(repr) {
-                    var val = scale(repr.__data__.properties[attribute]);
+                    var val = repr.__data__.properties[attribute];
+                    // make a separate bin for null/undefined values
+                    // values are also invalid if numeric scale and non-numeric value
+                    if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
+                        val = null;
+                    }
+                    else {
+                        val = scale(val);
+                    }
                     if (!data[val]) {
                         data[val] = [repr];
                     }
@@ -2109,7 +2117,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
             var extent = scale.invertExtent(r);
             // if we have too many items in range, both entries in extent will be undefined - ignore
             if (extent[0] == null && extent[1] == null) {
-                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "'!");
+                console.warn("range for " + metadata.key + " contains superfluous value '" + r + "' - ignoring!");
+                return null;
             }
             return {
                 representation: r,
@@ -2121,7 +2130,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
                 objects: objects(r)
                 //TODO: other / more general aggregations?
             };
-        });
+        })
+        .filter(function(d){return d;});
     }
     else {
         // ordinal and continuous-range scales
@@ -2146,8 +2156,8 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
         undefinedClass = {
             representation: metadata.undefinedColor,
             'class': 'undefined',
-            count: counter(metadata.undefinedColor),
-            objects: objects(metadata.undefinedColor)
+            count: counter(null),
+            objects: objects(null)
         };
     }
     
