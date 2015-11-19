@@ -935,7 +935,8 @@ function getStats(data, valueFunc) {
         var val = valueFunc(d);
         if (val !== undefined) {
             stats.count += 1;
-            if (!isNaN(+val)) {
+            if (dd.isNumeric(val)) {
+                val = +val;
                 stats.countNumbers += 1;
                 if (stats.min === undefined) stats.min = val;
                 if (stats.max === undefined) stats.max = val;
@@ -944,7 +945,9 @@ function getStats(data, valueFunc) {
                 if (val > 0) stats.anyPositive = true;
                 if (val < 0) stats.anyNegative = true;
             }
-            if (isNaN(+val) && val) stats.anyString = true;
+            else if (val) {
+                stats.anyString = true;
+            }
         }
     }
     if (data.each && typeof data.each == 'function') {
