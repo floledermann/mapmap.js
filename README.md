@@ -150,7 +150,7 @@ of your map.
 <svg id="mapEl" width="800" height="400"></svg>
 ```
 
-In order to correctly position HTML-based information like lengeds and mouseovers on the map, the SVG element must be
+In order to correctly position HTML-based information like legends and mouseovers on the map, the SVG element must be
 ***descendant of a positioned element***, i.e. an element with `position:` `absolute`, `relative` or `fixed`.
 
 The most simple map you can create will just render some GeoJSON:
