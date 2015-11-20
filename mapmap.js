@@ -2911,14 +2911,15 @@ mapmap.legend.html = function(options) {
         
         var newcells = cells.enter()
             .append('div')
-            .attr('class', 'legendCell')
             .style(options.cellStyle);
         
-        cells.each(function(d) {
-            if (d.class) {
-                d3.select(this).classed(d.class, true);
-            }
-        });
+        cells
+            .attr('class', 'legendCell')
+            .each(function(d) {
+                if (d.class) {
+                    d3.select(this).classed(d.class, true);
+                }
+            });
         
         if (reprAttribute == 'fill') {
             if (classes[0].representation.substring(0,4) != 'url(') {
