@@ -1,6 +1,4 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-
-},{}],2:[function(require,module,exports){
 /*! datadata.js © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -644,7 +642,9 @@ dd.reverse = function(data) {
 
 module.exports = dd;
 
-},{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
+},{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
+
+},{}],3:[function(require,module,exports){
 /*! mapmap.js 0.2.6 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -2858,12 +2858,24 @@ mapmap.legend.html = function(options) {
             color: '#999999',
             'background-color': '#dddddd'
         },
-        histogramBarWidth: function(count) {
-            return count;
-        }
+        histogramBarWidth: 1
     };
     
     options = mapmap.extend(DEFAULTS, options);
+    
+    function parameterFunction(param, func) {
+        if (dd.isFunction(param)) return param;
+        return func(param);
+    }
+    
+    options.histogramBarWidth = parameterFunction(options.histogramBarWidth, function(param) {
+        return function(count) {
+            var width = count * param;
+            // always round up small values to make sure at least 1px wide
+            if (width > 0 && width < 1) width = 1;
+            return width;
+        };
+    });
     
     return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
@@ -2995,9 +3007,6 @@ mapmap.legend.html = function(options) {
                     if (width.length && width.indexOf('px') == width.lenght - 2) {
                         return width;
                     }
-                    // pixel values -> clamp and round
-                    // always round up to make sure at least 1px wide
-                    if (width > 0 && width < 1) width = 1;
                     return Math.round(width) + 'px';
                 })
                 .text(function(d) { return ' ' + d.count(); });
@@ -3213,5 +3222,5 @@ function keyOrCallback(val) {
 }
 
 module.exports = mapmap;
-},{"datadata":2}]},{},[3])(3)
+},{"datadata":1}]},{},[3])(3)
 });

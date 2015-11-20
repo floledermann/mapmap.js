@@ -2211,12 +2211,24 @@ mapmap.legend.html = function(options) {
             color: '#999999',
             'background-color': '#dddddd'
         },
-        histogramBarWidth: function(count) {
-            return count;
-        }
+        histogramBarWidth: 1
     };
     
     options = mapmap.extend(DEFAULTS, options);
+    
+    function parameterFunction(param, func) {
+        if (dd.isFunction(param)) return param;
+        return func(param);
+    }
+    
+    options.histogramBarWidth = parameterFunction(options.histogramBarWidth, function(param) {
+        return function(count) {
+            var width = count * param;
+            // always round up small values to make sure at least 1px wide
+            if (width > 0 && width < 1) width = 1;
+            return width;
+        };
+    });
     
     return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
@@ -2348,9 +2360,6 @@ mapmap.legend.html = function(options) {
                     if (width.length && width.indexOf('px') == width.lenght - 2) {
                         return width;
                     }
-                    // pixel values -> clamp and round
-                    // always round up to make sure at least 1px wide
-                    if (width > 0 && width < 1) width = 1;
                     return Math.round(width) + 'px';
                 })
                 .text(function(d) { return ' ' + d.count(); });
