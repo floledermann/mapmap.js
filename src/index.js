@@ -153,6 +153,7 @@ mapmap.prototype.initEngine = function(element) {
     this.width = null;
     this.height = null;
     
+    // TODO: use options.width || options.defaultWidth etc.
     if (!this.width) {
         this.width = parseInt(mainEl.attr('width')) || 800;
     }
@@ -308,6 +309,7 @@ var domain = [0,1];
 
 var layer_counter = 0;
 
+// TODO: think about caching loaded resources (#8)
 mapmap.prototype.geometry = function(spec, keyOrOptions) {
 
     // key is default option
@@ -433,8 +435,7 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
     // note this has to happen after merging into this._promise.geometry to make
     // sure layers are created first (e.g. for highlighting)
     this.promise_data(promise);
-
-    
+ 
     return this;
 };
 
@@ -576,10 +577,6 @@ mapmap.prototype.anchor = function(d) {
 };
 
 mapmap.prototype.size = function() {
-    // TODO:
-    // our viewBox is set up for an extent of 800x400 units
-    // should we change this?
-
     // bounds are re-calculate by initEvents on every resize
     return {
         width: this.width,
@@ -654,8 +651,7 @@ mapmap.prototype.select = function(selection) {
 mapmap.prototype.highlight = function(selection) {
 
     var map = this;
-    
-    
+       
     if (selection === null) {
         map._elements.shadowEl.selectAll('path').remove();
         map._elements.shadowCropEl.selectAll('path').remove();
@@ -760,6 +756,10 @@ mapmap.prototype.promise_data = function(promise) {
     // we not *always* fulfill with canonical data i.e. the
     // underlying selection, or keep canonical data and refresh
     // selection always?
+    // Also, we need to keep data that has no entities in the geometry
+    // e.g. for loading stats of aggregated entities. We could
+    // use a global array of GeoJSON features, as this allows
+    // either geometry or properties to be null -- fl 2015-11-21
 
     var map = this;
     
@@ -785,6 +785,7 @@ mapmap.prototype.then = function(callback) {
     return this;
 };
 
+// TODO: think about caching loaded resources (#8)
 mapmap.prototype.data = function(spec, keyOrOptions) {
 
     var options = dd.isDictionary(keyOrOptions) ? keyOrOptions : {map: keyOrOptions};
