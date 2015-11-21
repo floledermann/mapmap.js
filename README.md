@@ -177,6 +177,8 @@ If you use mapmap.js in research and publish a paper about your work, please cit
 
 mapmap.js is created at [TU Wien Cartography Group](http://cartography.tuwien.ac.at/) by [Florian Ledermann](https://twitter.com/floledermann).
 
+Special thanks to [Michael N.](https://github.com/wahlatlas) for testing early versions.
+
 ## More information 
 
 For more information, see the
