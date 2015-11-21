@@ -34,10 +34,16 @@ var map = mapmap('#mapEl')
 
 ![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap.png)
 
+For detailed information, see the
+[Programming Guide](https://github.com/floledermann/mapmap.js/wiki/Programming-Guide) and
+[API Documentation](https://github.com/floledermann/mapmap.js/wiki/API-Documentation) in the [mapmap wiki](https://github.com/floledermann/mapmap.js/wiki).
+
+A collection of examples is provided in the [mapmap-examples repository](https://github.com/floledermann/mapmap-examples).
+
 ## Highlights
 
-![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap-examples.png)
 *Some examples created with mapmap.js*
+![mapmap.js screenshot](https://raw.githubusercontent.com/floledermann/mapmap.js/master/mapmap-examples.png)
 
 #### Transparent asynchronous resource loading
 
