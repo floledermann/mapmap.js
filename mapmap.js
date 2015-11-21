@@ -1245,13 +1245,16 @@ mapmap.prototype.getBoundingClientRect = function() {
         bounds = el.getBoundingClientRect(),
         cs = getComputedStyle(el),
         parentOffset = $(el.parentNode).offset(),
-        left = parentOffset.left;
+        left = parentOffset.left,
+        scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+        scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
+    ;
     // TODO: take into account margins etc.
     if (cs.left.indexOf('px') > -1) {
         left += parseInt(cs.left.slice(0,-2));
     }
     // this tests getBoundingClientRect() to be non-buggy
-    if (bounds.left == left) {
+    if (bounds.left == left - scrollLeft) {
         return bounds;
     }
     // construct synthetic boundingbox from computed style
@@ -1259,12 +1262,12 @@ mapmap.prototype.getBoundingClientRect = function() {
         width = parseInt(cs.width.slice(0,-2)),
         height = parseInt(cs.height.slice(0,-2));
     return {
-        left: left,
-        top: top,
+        left: left - scrollLeft,
+        top: top - scrollTop,
         width: width,
         height: height,
-        right: left + width,
-        bottom: top + height
+        right: left + width - scrollLeft,
+        bottom: top + height - scrollTop
     };
 };
 
@@ -1909,15 +1912,13 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
     pt.x = (bounds.left + bounds.right) / 2;
     pt.y = bounds.top;
     
-    var mapBounds = this.getBoundingClientRect(),
-        scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-        scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
-    ;
+    var mapBounds = this.getBoundingClientRect();
+    
     if (options.clipToViewport) {  
-        if (pt.x < mapBounds.left - scrollLeft + options.clipMargins.left) pt.x = mapBounds.left - scrollLeft + options.clipMargins.left;
-        if (pt.x > mapBounds.right - scrollLeft - options.clipMargins.right) pt.x = mapBounds.right - scrollLeft - options.clipMargins.right;
-        if (pt.y < mapBounds.top - scrollTop + options.clipMargins.top) pt.y = mapBounds.top - scrollTop + options.clipMargins.top;
-        if (pt.y > mapBounds.bottom - scrollTop - options.clipMargins.bottom) pt.y = mapBounds.bottom - scrollTop - options.clipMargins.bottom;
+        if (pt.x < mapBounds.left + options.clipMargins.left) pt.x = mapBounds.left + options.clipMargins.left;
+        if (pt.x > mapBounds.right - options.clipMargins.right) pt.x = mapBounds.right - options.clipMargins.right;
+        if (pt.y < mapBounds.top + options.clipMargins.top) pt.y = mapBounds.top + options.clipMargins.top;
+        if (pt.y > mapBounds.bottom - options.clipMargins.bottom) pt.y = mapBounds.bottom - options.clipMargins.bottom;
     }
     pt.x -= mapBounds.left;
     pt.y -= mapBounds.top;
