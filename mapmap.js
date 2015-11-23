@@ -1,4 +1,6 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+
+},{}],2:[function(require,module,exports){
 /*! datadata.js © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -642,10 +644,8 @@ dd.reverse = function(data) {
 
 module.exports = dd;
 
-},{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
-
-},{}],3:[function(require,module,exports){
-/*! mapmap.js 0.2.6 © 2014-2015 Florian Ledermann 
+},{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
+/*! mapmap.js 0.2.7 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -663,7 +663,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var dd = require('datadata');
 
-var version = '0.2.6';
+var version = '0.2.7';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
@@ -800,6 +800,7 @@ mapmap.prototype.initEngine = function(element) {
     this.width = null;
     this.height = null;
     
+    // TODO: use options.width || options.defaultWidth etc.
     if (!this.width) {
         this.width = parseInt(mainEl.attr('width')) || 800;
     }
@@ -955,6 +956,7 @@ var domain = [0,1];
 
 var layer_counter = 0;
 
+// TODO: think about caching loaded resources (#8)
 mapmap.prototype.geometry = function(spec, keyOrOptions) {
 
     // key is default option
@@ -1080,8 +1082,7 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
     // note this has to happen after merging into this._promise.geometry to make
     // sure layers are created first (e.g. for highlighting)
     this.promise_data(promise);
-
-    
+ 
     return this;
 };
 
@@ -1223,10 +1224,6 @@ mapmap.prototype.anchor = function(d) {
 };
 
 mapmap.prototype.size = function() {
-    // TODO:
-    // our viewBox is set up for an extent of 800x400 units
-    // should we change this?
-
     // bounds are re-calculate by initEvents on every resize
     return {
         width: this.width,
@@ -1301,8 +1298,7 @@ mapmap.prototype.select = function(selection) {
 mapmap.prototype.highlight = function(selection) {
 
     var map = this;
-    
-    
+       
     if (selection === null) {
         map._elements.shadowEl.selectAll('path').remove();
         map._elements.shadowCropEl.selectAll('path').remove();
@@ -1407,6 +1403,10 @@ mapmap.prototype.promise_data = function(promise) {
     // we not *always* fulfill with canonical data i.e. the
     // underlying selection, or keep canonical data and refresh
     // selection always?
+    // Also, we need to keep data that has no entities in the geometry
+    // e.g. for loading stats of aggregated entities. We could
+    // use a global array of GeoJSON features, as this allows
+    // either geometry or properties to be null -- fl 2015-11-21
 
     var map = this;
     
@@ -1432,6 +1432,7 @@ mapmap.prototype.then = function(callback) {
     return this;
 };
 
+// TODO: think about caching loaded resources (#8)
 mapmap.prototype.data = function(spec, keyOrOptions) {
 
     var options = dd.isDictionary(keyOrOptions) ? keyOrOptions : {map: keyOrOptions};
@@ -3224,5 +3225,5 @@ function keyOrCallback(val) {
 }
 
 module.exports = mapmap;
-},{"datadata":1}]},{},[3])(3)
+},{"datadata":2}]},{},[3])(3)
 });
