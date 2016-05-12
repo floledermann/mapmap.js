@@ -19,10 +19,10 @@ var dd = require('datadata');
 var version = '__VERSION__';
 
 // TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
-function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
-_assert(window.d3, "d3.js is required!");
-_assert(window.$, "jQuery is required!");
-_assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, e.g. from https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js");
+function assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
+assert(window.d3, "d3.js is required!");
+assert(window.$, "jQuery is required!");
+assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, as detailed in https://github.com/floledermann/mapmap.js#using-mapmapjs");
 
 var default_settings = {
     locale: 'en',
@@ -1057,6 +1057,15 @@ mapmap.prototype.autoSqrtScale = function(valueFunc) {
         .domain([0,stats.max]);    
 };
 
+mapmap.prototype.attr = function(spec, selection) {
+    this.symbolize(function(repr) {
+        repr.attr(spec);
+    }, selection);
+    return this;
+}
+
+// TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
+// either this should be unified, or the distinctions clearly worked out
 mapmap.prototype.symbolize = function(callback, selection, finalize) {
 
     var map = this;
@@ -1911,18 +1920,16 @@ mapmap.prototype.resetZoom = function(callback, duration) {
 // Manipulate representation geometry. This can be used e.g. to register event handlers.
 // spec is a function to be called with selection to set up event handler
 mapmap.prototype.applyBehavior = function(spec, selection) {
+
+    assert(dd.isFunction(spec), "Behavior must be a function");
+    
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
         // TODO: this should be configurable via options
         // and needs to integrate with managing pointer events (see hoverInfo)
         sel.style('pointer-events','visiblePainted');
-        if (typeof spec == 'function') {
-            spec.call(map, sel);
-        }
-        else {
-            throw "Behavior " + spec + " not a function";
-        }
+        spec.call(map, sel);
     });
     return this;
 };

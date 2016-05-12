@@ -1,6 +1,9 @@
 # mapmap.js Changelog
 
-## Upcoming (0.2.8)
+## Trunk / Upcoming
+
+- New option for `.geomtry()`: `setExtent` (default: `true`) to determine whether map extent should be set to geometrie's extent on load
+- `.geometry()` now also accepts single GeoJSON objects
 
 ## 0.2.7
 
