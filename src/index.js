@@ -18,10 +18,8 @@ var dd = require('datadata');
 
 var version = '__VERSION__';
 
-// TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
 function assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
 assert(window.d3, "d3.js is required!");
-assert(window.$, "jQuery is required!");
 assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, as detailed in https://github.com/floledermann/mapmap.js#using-mapmapjs");
 
 var default_settings = {
@@ -68,7 +66,7 @@ var mapmap = function(element, options) {
     if (!(this instanceof mapmap)) return new mapmap(element, options);
 
     this.settings = {};    
-    this.options(mapmap.extend(true, {}, default_settings, options));
+    this.options(mapmap.extend({}, default_settings, options));
     
     // promises
     this._promise = {
@@ -99,30 +97,20 @@ var mapmap = function(element, options) {
 };
 
 // expose datadata library in case we are bundled for browser
-// this is a hack as browserify doesn't support mutliple global exports
+// (browserify doesn't support mutliple global exports)
 mapmap.datadata = dd;
 
 mapmap.prototype = {
 	version: version
 };
 
-mapmap.extend = $.extend;
-/*
-// TODO: this or jquery-extend to get rid of jquery dep.?
-// http://andrewdupont.net/2009/08/28/deep-extending-objects-in-javascript/
-mapmap.extend = function(destination, source) {
-  for (var property in source) {
-    if (source[property] && source[property].constructor && source[property].constructor === Object) {
-      destination[property] = destination[property] || {};
-      mapmap.extend(destination[property], source[property]);
-    }
-    else {
-      destination[property] = source[property];
-    }
-  }
-  return destination;
-};
-*/
+mapmap.extend = function extend(){
+    for(var i=1; i<arguments.length; i++)
+        for(var key in arguments[i])
+            if(arguments[i].hasOwnProperty(key))
+                arguments[0][key] = arguments[i][key];
+    return arguments[0];
+}
 
 mapmap.prototype.initEngine = function(element) {
     // SVG specific initialization, for now we have no engine switching functionality
@@ -2027,12 +2015,6 @@ var d3_locales = {
     }
 };
 
-var optionsListeners = {
-    'locale': function(val, old_val) {
-        this.setLocale(val);
-        return this;
-    }
-};
 
 mapmap.prototype.setLocale = function(lang){
     var locale;
@@ -2058,43 +2040,16 @@ mapmap.prototype.setLocale = function(lang){
 }
 
 mapmap.prototype.options = function(spec, value) {
-    // get/set indexed property
-    // http://stackoverflow.com/a/6394168/171579
-    function propertyDeep(obj, is, value) {
-        if (typeof is == 'string')
-            return propertyDeep(obj,is.split('.'), value);
-        else if (is.length==1 && value!==undefined) {
-            obj[is[0]] = value;
-            return value;
-        }
-        else if (is.length==0)
-            return obj;
-        else
-            return propertyDeep(obj[is[0]],is.slice(1), value);
+
+    // locale can be set through options but needs to be set up, so keep track of this here
+    var oldLocale = this.settings.locale;
+
+    mapmap.extend(this.settings, spec);
+    
+    if (this.settings.locale != oldLocale) {
+        this.setLocale(this.settings.locale);
     }
-    if (typeof spec == 'string') {
-        if (optionsListeners[spec]) {
-            optionsListeners[spec].call(this, value, propertyDeep(this.settings, spec, value));
-        }
-        else {
-            propertyDeep(this.settings, spec, value);
-        }
-    }
-    else {
-        var old = mapmap.extend(true, {}, this.settings);
-        mapmap.extend(true, this.settings, spec);
-        // TODO: this is quite inefficient, should be integrated into a custom extend() function
-        var keys = Object.keys(optionsListeners);
-        for (var i=0; i<keys.length; i++) {
-            var a = propertyDeep(old, keys[i]),
-                b = propertyDeep(this.settings, keys[i]);
-            if (a !== b) {
-                optionsListeners[keys[i]].call(this, b, a);
-            }
-        }
-        
-    }
-    //settings.legendOptions.containerAttributes.transform = value;
+
     return this;
 };
 
