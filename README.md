@@ -126,11 +126,10 @@ Read more in the [Programming Guide...](https://github.com/floledermann/mapmap.j
 
 ## Using mapmap.js
 
-To use mapmap.js in the browser, you need to load D3.js and jQuery before loading mapmap.js.
+To use mapmap.js in the browser, you need to load D3.js before loading mapmap.js.
 
 ```html
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 ``` 
 
 Internet Explorer and older versions of other browsers also require a ***polyfill for the Promise object***, which is built

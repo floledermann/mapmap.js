@@ -1475,7 +1475,6 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
     return func;
 };
 
-// TODO: modularize and introduce jQuery dependency here (or implement independent of jQuery)
 mapmap.prototype.hoverInfo = function(spec, options) {
 
     options = dd.merge({
@@ -1494,24 +1493,22 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         }
     }, options);
     
-    var $parent = $(this._elements.parent.node());
-    var hoverEl = $parent.find('.' + options.hoverClassName);
+    var hoverEl = this._elements.parent.select('.' + options.hoverClassName);
 
     if (!spec) {
         return this.hover(null, null, options);
     }
 
     var htmlFunc = this.buildHTMLFunc(spec);
-    if (hoverEl.length == 0) {
-        hoverEl = $('<div class="' + options.hoverClassName + '"></div>');
-        $parent.append(hoverEl);
+    if (hoverEl.empty()) {
+        hoverEl = this._elements.parent.append('div').attr('class',options.hoverClassName);
     }
-    hoverEl.css(options.hoverStyle);
+    hoverEl.style(options.hoverStyle);
     if (!hoverEl.mapmap_eventHandlerInstalled) {
         hoverEl.on('mouseenter', function() {
-            hoverEl.css(options.hoverEnterStyle);
+            hoverEl.style(options.hoverEnterStyle);
         }).on('mouseleave', function() {
-            hoverEl.css(options.hoverLeaveStyle);
+            hoverEl.style(options.hoverLeaveStyle);
         });
         hoverEl.mapmap_eventHandlerInstalled = true;
     }
@@ -1519,27 +1516,27 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     function show(d, point){
         // offsetParent only works for rendered objects, so place object first!
         // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.css(options.hoverEnterStyle);  
+        hoverEl.style(options.hoverEnterStyle);  
         
-        var offsetEl = hoverEl.offsetParent(),
-            offsetHeight = offsetEl.outerHeight(false),
+        var offsetEl = hoverEl.node().offsetParent || hoverEl,
             mainEl = this._elements.main.node(),
             bounds = this.getBoundingClientRect(),
+            offsetBounds = offsetEl.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
             scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
-            top = bounds.top + scrollTop - offsetEl.offset().top,
-            left = bounds.left + scrollLeft - offsetEl.offset().left;
+            top = bounds.top - offsetBounds.top,
+            left = bounds.left - offsetBounds.left;
 
         hoverEl
-            .css({
-                bottom: (offsetHeight - top - point.y) + 'px',
+            .style({
+                bottom: (offsetBounds.height - top - point.y) + 'px',
                 //top: point.y + 'px',
                 left: (left + point.x) + 'px'
             })
             .html(htmlFunc(d));
     }
     function hide() {
-        hoverEl.css(options.hoverLeaveStyle);
+        hoverEl.style(options.hoverLeaveStyle);
     }
     
     return this.hover(show, hide, options);
