@@ -1,6 +1,4 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mapmap = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-
-},{}],2:[function(require,module,exports){
 /*! datadata.js © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -644,7 +642,9 @@ dd.reverse = function(data) {
 
 module.exports = dd;
 
-},{"d3-dsv":1,"fs":1}],3:[function(require,module,exports){
+},{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
+
+},{}],3:[function(require,module,exports){
 /*! mapmap.js 0.2.7 © 2014-2015 Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
@@ -665,11 +665,9 @@ var dd = require('datadata');
 
 var version = '0.2.7';
 
-// TODO: can we get rid of jQuery dependency through var extend = require("jquery-extend")?
-function _assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
-_assert(window.d3, "d3.js is required!");
-_assert(window.$, "jQuery is required!");
-_assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, e.g. from https://raw.githubusercontent.com/floledermann/mapmap-examples/master/lib/promise-1.0.0.js");
+function assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
+assert(window.d3, "d3.js is required!");
+assert(window.Promise, "Promises not available in your browser - please add the necessary polyfill, as detailed in https://github.com/floledermann/mapmap.js#using-mapmapjs");
 
 var default_settings = {
     locale: 'en',
@@ -715,7 +713,7 @@ var mapmap = function(element, options) {
     if (!(this instanceof mapmap)) return new mapmap(element, options);
 
     this.settings = {};    
-    this.options(mapmap.extend(true, {}, default_settings, options));
+    this.options(mapmap.extend({}, default_settings, options));
     
     // promises
     this._promise = {
@@ -746,30 +744,20 @@ var mapmap = function(element, options) {
 };
 
 // expose datadata library in case we are bundled for browser
-// this is a hack as browserify doesn't support mutliple global exports
+// (browserify doesn't support mutliple global exports)
 mapmap.datadata = dd;
 
 mapmap.prototype = {
 	version: version
 };
 
-mapmap.extend = $.extend;
-/*
-// TODO: this or jquery-extend to get rid of jquery dep.?
-// http://andrewdupont.net/2009/08/28/deep-extending-objects-in-javascript/
-mapmap.extend = function(destination, source) {
-  for (var property in source) {
-    if (source[property] && source[property].constructor && source[property].constructor === Object) {
-      destination[property] = destination[property] || {};
-      mapmap.extend(destination[property], source[property]);
-    }
-    else {
-      destination[property] = source[property];
-    }
-  }
-  return destination;
-};
-*/
+mapmap.extend = function extend(){
+    for(var i=1; i<arguments.length; i++)
+        for(var key in arguments[i])
+            if(arguments[i].hasOwnProperty(key))
+                arguments[0][key] = arguments[i][key];
+    return arguments[0];
+}
 
 mapmap.prototype.initEngine = function(element) {
     // SVG specific initialization, for now we have no engine switching functionality
@@ -783,7 +771,7 @@ mapmap.prototype.initEngine = function(element) {
     this._elements = {
         main: mainEl,
         map: mapEl,
-        parent: $(mainEl.node()).parent(),
+        parent: d3.select(mainEl.node().parentNode),
         // child elements
         defs: mainEl.insert('defs', '.map'),
         backgroundGeometry: mapEl.append('g').attr('class', 'background-geometry'),
@@ -848,14 +836,24 @@ mapmap.prototype.initEngine = function(element) {
         
     el.remove();
     
-    // any IE?
+    // compatibility settings
     if (navigator.userAgent.indexOf('MSIE') !== -1 || navigator.appVersion.indexOf('Trident/') > 0) {
         this.supports.hoverDomModification = false;
     }
     else {
         this.supports.hoverDomModification = true;
     }
-
+    
+    // Firefox < 35 will report wrong BoundingClientRect (adding clipped background),
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=530985
+    var match = /Firefox\/(\d+)/.exec(navigator.userAgent);
+    if (match && parseInt(match[1]) < 35) {
+        this.supports.svgGetBoundingClientRect = false;
+    }
+    else {
+        this.supports.svgGetBoundingClientRect = true;
+    }
+    
     var map = this;
     // save viewport state separately, as zoom may not have exact values (due to animation interpolation)
     this.current_scale = 1;
@@ -964,6 +962,7 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
 
     options = dd.merge({
         key: 'id',
+        setExtent: true
         // layers: taken from input or auto-generated layer name
     }, options);
 
@@ -986,9 +985,40 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
                     map.layers.insert(t.index, t.name, t.geometry);
                 }
             });
+            if (options.setExtent) {
+                if (!map.selected_extent) {
+                    map._extent(spec);           
+                }
+                map.draw();
+                if (options.ondraw) options.ondraw();
+            }
+        });
+        return this;
+    }
+
+    if (dd.isDictionary(spec)) {
+        if (!options.layers) {
+            options.layers = 'layer-' + layer_counter++;
+        }
+        
+        spec = [{type:'Feature',geometry:spec}];
+
+        map.layers.push(options.layers, spec);
+        // add dummy promise, we are not loading anything
+        var promise = new Promise(function(resolve, reject) {
+            resolve(spec);
+        });
+        this.promise_data(promise);
+        // set up projection first to avoid reprojecting geometry
+        // TODO: setExtent options should be decoupled from drawing,
+        // we need a way to defer both until drawing on last geom promise works
+        if (options.setExtent) {
+            if (!map.selected_extent) {
+                map._extent(spec);           
+            }
             map.draw();
             if (options.ondraw) options.ondraw();
-        });
+        }
         return this;
     }
 
@@ -1005,15 +1035,18 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
         });
         this.promise_data(promise);
         // set up projection first to avoid reprojecting geometry
-        if (!map.selected_extent) {
-            map._extent(new_topo.values());           
+        if (options.setExtent) {
+            if (!map.selected_extent) {
+                map._extent(new_topo.values());           
+            }
+            // TODO: we need a smarter way of setting up projection/bounding box initially
+            // if extent() was called, this should have set up bounds, else we need to do it here
+            // however, extent() currently operates on the rendered <path>s generated by draw()
+            // Also: draw should be called only at end of promise chain, not inbetween!
+            //this._promise.geometry.then(draw);
+            map.draw();
+            if (options.ondraw) options.ondraw();
         }
-        // TODO: we need a smarter way of setting up projection/bounding box initially
-        // if extent() was called, this should have set up bounds, else we need to do it here
-        // however, extent() currently operates on the rendered <path>s generated by draw()
-        //this._promise.geometry.then(draw);
-        map.draw();
-        if (options.ondraw) options.ondraw();
         return this;
     }
 
@@ -1067,8 +1100,10 @@ mapmap.prototype.geometry = function(spec, keyOrOptions) {
             }
         }
         // set up projection first to avoid reprojecting geometry
-        if (!map.selected_extent) {
-            map._extent(geom);           
+        if (options.setExtent) {
+            if (!map.selected_extent) {
+                map._extent(geom);           
+            }
         }
         // TODO: we need a smarter way of setting up projection/bounding box initially
         // if extent() was called, this should have set up bounds, else we need to do it here
@@ -1233,15 +1268,19 @@ mapmap.prototype.size = function() {
 
 
 mapmap.prototype.getBoundingClientRect = function() {
-    // basically returns getBoundingClientRect() for main SVG element
-    // Firefox < 35 will report wrong BoundingClientRect (adding clipped background),
-    // so we have to fix it
+
+    var el = this._elements.main.node(),
+        bounds = el.getBoundingClientRect();
+    
+    if (this.supports.svgGetBoundingClientRect) {
+        return bounds;
+    }
+        
+    // Fix getBoundingClientRect() for Firefox < 35
     // https://bugzilla.mozilla.org/show_bug.cgi?id=530985
     // http://stackoverflow.com/questions/23684821/calculate-size-of-svg-element-in-html-page
-    var el = this._elements.main.node(),
-        bounds = el.getBoundingClientRect(),
-        cs = getComputedStyle(el),
-        parentOffset = $(el.parentNode).offset(),
+    var cs = getComputedStyle(el),
+        parentOffset = el.parentNode.getBoundingClientRect(),
         left = parentOffset.left,
         scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
         scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
@@ -1667,6 +1706,15 @@ mapmap.prototype.autoSqrtScale = function(valueFunc) {
         .domain([0,stats.max]);    
 };
 
+mapmap.prototype.attr = function(spec, selection) {
+    this.symbolize(function(repr) {
+        repr.attr(spec);
+    }, selection);
+    return this;
+}
+
+// TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
+// either this should be unified, or the distinctions clearly worked out
 mapmap.prototype.symbolize = function(callback, selection, finalize) {
 
     var map = this;
@@ -2092,23 +2140,22 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         }
     }, options);
     
-    var hoverEl = this._elements.parent.find('.' + options.hoverClassName);
+    var hoverEl = this._elements.parent.select('.' + options.hoverClassName);
 
     if (!spec) {
         return this.hover(null, null, options);
     }
 
     var htmlFunc = this.buildHTMLFunc(spec);
-    if (hoverEl.length == 0) {
-        hoverEl = $('<div class="' + options.hoverClassName + '"></div>');
-        this._elements.parent.append(hoverEl);
+    if (hoverEl.empty()) {
+        hoverEl = this._elements.parent.append('div').attr('class',options.hoverClassName);
     }
-    hoverEl.css(options.hoverStyle);
+    hoverEl.style(options.hoverStyle);
     if (!hoverEl.mapmap_eventHandlerInstalled) {
         hoverEl.on('mouseenter', function() {
-            hoverEl.css(options.hoverEnterStyle);
+            hoverEl.style(options.hoverEnterStyle);
         }).on('mouseleave', function() {
-            hoverEl.css(options.hoverLeaveStyle);
+            hoverEl.style(options.hoverLeaveStyle);
         });
         hoverEl.mapmap_eventHandlerInstalled = true;
     }
@@ -2116,27 +2163,27 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     function show(d, point){
         // offsetParent only works for rendered objects, so place object first!
         // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.css(options.hoverEnterStyle);  
+        hoverEl.style(options.hoverEnterStyle);  
         
-        var offsetEl = hoverEl.offsetParent(),
-            offsetHeight = offsetEl.outerHeight(false),
+        var offsetEl = hoverEl.node().offsetParent || hoverEl,
             mainEl = this._elements.main.node(),
             bounds = this.getBoundingClientRect(),
+            offsetBounds = offsetEl.getBoundingClientRect(),
             scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
             scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
-            top = bounds.top + scrollTop - offsetEl.offset().top,
-            left = bounds.left + scrollLeft - offsetEl.offset().left;
+            top = bounds.top - offsetBounds.top,
+            left = bounds.left - offsetBounds.left;
 
         hoverEl
-            .css({
-                bottom: (offsetHeight - top - point.y) + 'px',
+            .style({
+                bottom: (offsetBounds.height - top - point.y) + 'px',
                 //top: point.y + 'px',
                 left: (left + point.x) + 'px'
             })
             .html(htmlFunc(d));
     }
     function hide() {
-        hoverEl.css(options.hoverLeaveStyle);
+        hoverEl.style(options.hoverLeaveStyle);
     }
     
     return this.hover(show, hide, options);
@@ -2521,18 +2568,16 @@ mapmap.prototype.resetZoom = function(callback, duration) {
 // Manipulate representation geometry. This can be used e.g. to register event handlers.
 // spec is a function to be called with selection to set up event handler
 mapmap.prototype.applyBehavior = function(spec, selection) {
+
+    assert(dd.isFunction(spec), "Behavior must be a function");
+    
     var map = this;
     this._promise.geometry.then(function(topo) {
         var sel = map.getRepresentations(selection);
         // TODO: this should be configurable via options
         // and needs to integrate with managing pointer events (see hoverInfo)
         sel.style('pointer-events','visiblePainted');
-        if (typeof spec == 'function') {
-            spec.call(map, sel);
-        }
-        else {
-            throw "Behavior " + spec + " not a function";
-        }
+        spec.call(map, sel);
     });
     return this;
 };
@@ -2630,12 +2675,6 @@ var d3_locales = {
     }
 };
 
-var optionsListeners = {
-    'locale': function(val, old_val) {
-        this.setLocale(val);
-        return this;
-    }
-};
 
 mapmap.prototype.setLocale = function(lang){
     var locale;
@@ -2661,43 +2700,16 @@ mapmap.prototype.setLocale = function(lang){
 }
 
 mapmap.prototype.options = function(spec, value) {
-    // get/set indexed property
-    // http://stackoverflow.com/a/6394168/171579
-    function propertyDeep(obj, is, value) {
-        if (typeof is == 'string')
-            return propertyDeep(obj,is.split('.'), value);
-        else if (is.length==1 && value!==undefined) {
-            obj[is[0]] = value;
-            return value;
-        }
-        else if (is.length==0)
-            return obj;
-        else
-            return propertyDeep(obj[is[0]],is.slice(1), value);
+
+    // locale can be set through options but needs to be set up, so keep track of this here
+    var oldLocale = this.settings.locale;
+
+    mapmap.extend(this.settings, spec);
+    
+    if (this.settings.locale != oldLocale) {
+        this.setLocale(this.settings.locale);
     }
-    if (typeof spec == 'string') {
-        if (optionsListeners[spec]) {
-            optionsListeners[spec].call(this, value, propertyDeep(this.settings, spec, value));
-        }
-        else {
-            propertyDeep(this.settings, spec, value);
-        }
-    }
-    else {
-        var old = mapmap.extend(true, {}, this.settings);
-        mapmap.extend(true, this.settings, spec);
-        // TODO: this is quite inefficient, should be integrated into a custom extend() function
-        var keys = Object.keys(optionsListeners);
-        for (var i=0; i<keys.length; i++) {
-            var a = propertyDeep(old, keys[i]),
-                b = propertyDeep(this.settings, keys[i]);
-            if (a !== b) {
-                optionsListeners[keys[i]].call(this, b, a);
-            }
-        }
-        
-    }
-    //settings.legendOptions.containerAttributes.transform = value;
+
     return this;
 };
 
@@ -2881,12 +2893,11 @@ mapmap.legend.html = function(options) {
     
     return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
-        var legend = this._elements.parent.find('.' + options.legendClassName);
-        if (legend.length == 0) {
-            legend = $('<div class="' + options.legendClassName + '"></div>');
-            this._elements.parent.prepend(legend);
+        var legend = this._elements.parent.select('.' + options.legendClassName);
+        if (legend.empty()) {
+            legend = this._elements.parent.append('div')
+                .attr('class',options.legendClassName);
         }
-        legend = d3.select(legend[0]);
         
         legend.style(options.legendStyle);
         
@@ -3178,7 +3189,7 @@ mapmap.prototype._extent = function(geom, options) {
         var names = Object.keys(geom.objects);
         var all = [];
         for (var i=0; i<names.length; i++) {
-            $.merge(all, topojson.feature(geom, geom.objects[names[i]]).features);
+            all = all.concat(topojson.feature(geom, geom.objects[names[i]]).features);
         }
         geom = all;
     }
@@ -3225,5 +3236,5 @@ function keyOrCallback(val) {
 }
 
 module.exports = mapmap;
-},{"datadata":2}]},{},[3])(3)
+},{"datadata":1}]},{},[3])(3)
 });
