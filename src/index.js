@@ -189,14 +189,24 @@ mapmap.prototype.initEngine = function(element) {
         
     el.remove();
     
-    // any IE?
+    // compatibility settings
     if (navigator.userAgent.indexOf('MSIE') !== -1 || navigator.appVersion.indexOf('Trident/') > 0) {
         this.supports.hoverDomModification = false;
     }
     else {
         this.supports.hoverDomModification = true;
     }
-
+    
+    // Firefox < 35 will report wrong BoundingClientRect (adding clipped background),
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=530985
+    var match = /Firefox\/(\d+)/.exec(navigator.userAgent);
+    if (match && parseInt(match[1]) < 35) {
+        this.supports.svgGetBoundingClientRect = false;
+    }
+    else {
+        this.supports.svgGetBoundingClientRect = true;
+    }
+    
     var map = this;
     // save viewport state separately, as zoom may not have exact values (due to animation interpolation)
     this.current_scale = 1;
@@ -611,15 +621,19 @@ mapmap.prototype.size = function() {
 
 
 mapmap.prototype.getBoundingClientRect = function() {
-    // basically returns getBoundingClientRect() for main SVG element
-    // Firefox < 35 will report wrong BoundingClientRect (adding clipped background),
-    // so we have to fix it
+
+    var el = this._elements.main.node(),
+        bounds = el.getBoundingClientRect();
+    
+    if (this.supports.svgGetBoundingClientRect) {
+        return bounds;
+    }
+        
+    // Fix getBoundingClientRect() for Firefox < 35
     // https://bugzilla.mozilla.org/show_bug.cgi?id=530985
     // http://stackoverflow.com/questions/23684821/calculate-size-of-svg-element-in-html-page
-    var el = this._elements.main.node(),
-        bounds = el.getBoundingClientRect(),
-        cs = getComputedStyle(el),
-        parentOffset = $(el.parentNode).offset(),
+    var cs = getComputedStyle(el),
+        parentOffset = el.parentNode.getBoundingClientRect(),
         left = parentOffset.left,
         scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
         scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0
