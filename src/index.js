@@ -124,7 +124,7 @@ mapmap.prototype.initEngine = function(element) {
     this._elements = {
         main: mainEl,
         map: mapEl,
-        parent: $(mainEl.node()).parent(),
+        parent: d3.select(mainEl.node().parentNode),
         // child elements
         defs: mainEl.insert('defs', '.map'),
         backgroundGeometry: mapEl.append('g').attr('class', 'background-geometry'),
@@ -1461,6 +1461,7 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
     return func;
 };
 
+// TODO: modularize and introduce jQuery dependency here (or implement independent of jQuery)
 mapmap.prototype.hoverInfo = function(spec, options) {
 
     options = dd.merge({
@@ -1479,7 +1480,8 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         }
     }, options);
     
-    var hoverEl = this._elements.parent.find('.' + options.hoverClassName);
+    var $parent = $(this._elements.parent.node());
+    var hoverEl = $parent.find('.' + options.hoverClassName);
 
     if (!spec) {
         return this.hover(null, null, options);
@@ -1488,7 +1490,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     var htmlFunc = this.buildHTMLFunc(spec);
     if (hoverEl.length == 0) {
         hoverEl = $('<div class="' + options.hoverClassName + '"></div>');
-        this._elements.parent.append(hoverEl);
+        $parent.append(hoverEl);
     }
     hoverEl.css(options.hoverStyle);
     if (!hoverEl.mapmap_eventHandlerInstalled) {
@@ -2233,12 +2235,11 @@ mapmap.legend.html = function(options) {
     
     return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
-        var legend = this._elements.parent.find('.' + options.legendClassName);
-        if (legend.length == 0) {
-            legend = $('<div class="' + options.legendClassName + '"></div>');
-            this._elements.parent.prepend(legend);
+        var legend = this._elements.parent.select('.' + options.legendClassName);
+        if (legend.empty()) {
+            legend = this._elements.parent.append('div')
+                .attr('class',options.legendClassName);
         }
-        legend = d3.select(legend[0]);
         
         legend.style(options.legendStyle);
         
@@ -2530,7 +2531,7 @@ mapmap.prototype._extent = function(geom, options) {
         var names = Object.keys(geom.objects);
         var all = [];
         for (var i=0; i<names.length; i++) {
-            $.merge(all, topojson.feature(geom, geom.objects[names[i]]).features);
+            all = all.concat(topojson.feature(geom, geom.objects[names[i]]).features);
         }
         geom = all;
     }
