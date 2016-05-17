@@ -7,13 +7,14 @@
   "main": "build/mapmap.node.js",
   "jsnext:main": "index.js",
   "scripts": {
-    "pretest": "rm -rf build && mkdir build && json2module package.json > build/package.js && node bin/rollup-node && node bin/rollup",
+    "clean": "node bin/clean",
+    "build": "json2module package.json > build/package.js && node bin/rollup-node && node bin/rollup",
+    "pretest": "npm run build",
     "test": "tape test/**/*-test.js",
-    "build": "rm -rf build && mkdir build && json2module package.json > build/package.js && node bin/rollup",
     "browserify-dev": "browserify src/index.js --standalone mapmap --ignore d3-dsv --outfile build/mapmap.js",
     "browserify-production": "browserify src/index.js --standalone mapmap --ignore d3-dsv | uglifyjs > build/mapmap.min.js",
     "browserify": "npm run browserify-dev && npm run browserify-production",
-    "preversion": "npm test",
+    "preversion": "npm run clean && npm test",
     "version": "npm run build && git add mapmap.js mapmap.min.js"
   },
   "repository": {
@@ -28,8 +29,7 @@
     "visualization"
   ],
   "dependencies": {
-    "datadata": "0.1.8",
-    "d3": "3.5.5"
+    "datadata": "0.1.8"
   },
   "devDependencies": {
     "json2module": "0.0",
