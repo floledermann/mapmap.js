@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+
+var rollup = require("rollup"),
+    nodeResolve = require("rollup-plugin-node-resolve"),
+    package = require("../package.json");
+
+rollup.rollup({
+  entry: "index.js",
+  plugins: [nodeResolve({jsnext: true})]
+}).then(function(bundle) {
+  return bundle.write({
+    format: "umd",
+    moduleName: package.name,
+    dest: "build/" + package.name + ".js"
+  });
+}).then(function() {
+  console.warn("Output: build/" + package.name + ".js");
+}).catch(abort);
+
+function abort(error) {
+  console.error(error.stack);
+}

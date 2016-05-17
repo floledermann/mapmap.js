@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+
+var fs = require("fs"),
+    rollup = require("rollup"),
+    package = require("../package.json");
+
+rollup.rollup({
+  entry: "index.js",
+  external: Object.keys(package.dependencies)
+}).then(function(bundle) {
+  var result = bundle.generate({
+    format: "cjs"
+  });
+  return new Promise(function(resolve, reject) {
+    fs.writeFile("build/" + package.name + ".node.js", result.code, "utf8", function(error) {
+      if (error) return reject(error);
+      else resolve();
+    });
+  });
+}).then(function() {
+  console.warn("Output: build/" + package.name + ".node.js");
+}).catch(abort);
+
+function abort(error) {
+  console.error(error.stack);
+}
