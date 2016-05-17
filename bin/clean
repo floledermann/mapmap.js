@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+
+// replacement for "rm -rf build && mkdir build" (for building on windows)
+
+var fs = require('fs');
+
+deleteDirectoryRecursive("../build");
+createDirectory("../build");
+
+function createDirectory(path) {
+  path = __dirname + "/" + path;
+  try {
+    fs.mkdirSync(path);
+  } catch(e) {
+    if ( e.code != 'EEXIST' ) throw e;
+  }
+}
+
+function deleteDirectoryRecursive(path) {
+  // make sure to only delete stuff relative to our directory
+  path = __dirname + "/" + path;
+  if( fs.existsSync(path) ) {
+    fs.readdirSync(path).forEach(function(file,index){
+      var curPath = path + "/" + file;
+      if(fs.lstatSync(curPath).isDirectory()) { // recurse
+        deleteFolderRecursive(curPath);
+      } else { // delete file
+        //console.log("deleting " + curPath);
+        fs.unlinkSync(curPath);
+      }
+    });
+    fs.rmdirSync(path);
+  }
+};
+
