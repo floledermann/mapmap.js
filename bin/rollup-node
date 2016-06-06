@@ -9,7 +9,8 @@ rollup.rollup({
   external: Object.keys(package.dependencies)
 }).then(function(bundle) {
   var result = bundle.generate({
-    format: "cjs"
+    format: "cjs",
+    banner: '/* mapmap.js v' + package.version + ' © Florian Ledermann <florian.ledermann@tuwien.ac.at> */',
   });
   return new Promise(function(resolve, reject) {
     fs.writeFile("build/" + package.name + ".node.js", result.code, "utf8", function(error) {

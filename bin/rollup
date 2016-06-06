@@ -11,7 +11,8 @@ rollup.rollup({
   return bundle.write({
     format: "umd",
     moduleName: package.name,
-    dest: "build/" + package.name + ".js"
+    dest: "build/" + package.name + ".js",
+    banner: '/* mapmap.js v' + package.version + ' © Florian Ledermann <florian.ledermann@tuwien.ac.at> */'
   });
 }).then(function() {
   console.warn("Output: build/" + package.name + ".js");
