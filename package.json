@@ -1,7 +1,7 @@
 {
   "name": "mapmap",
   "description": "Library for creating maps based on SVG and D3.js in the browser.",
-  "version": "0.2.7",
+  "version": "0.2.8-dev.0",
   "author": "Florian Ledermann",
   "license": "AGPL-3.0",
   "main": "src/index",

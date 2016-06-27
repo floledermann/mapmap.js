@@ -1084,6 +1084,33 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
     return this;
 };
 
+mapmap.prototype.symbolizeAttribute = function(attribute, reprAttribute, metaAttribute, selection) {
+
+    metaAttribute = metaAttribute || reprAttribute;
+    
+    selection = selection || this.selected;
+    
+    var map = this;
+    
+    this.promise_data().then(function(data) {      
+
+        var metadata = map.getMetadata(attribute);
+
+        var scale = d3.scale[metadata.scale]();
+        scale.domain(metadata.domain).range(metadata[metaAttribute]);
+
+        map.symbolize(function(el, geom, data) {
+            el.attr(reprAttribute, scale(data[attribute]));
+        }, selection);
+
+        map.updateLegend(attribute, reprAttribute, metadata, scale, selection);
+    });
+    
+    return this;
+    
+}
+
+
 // TODO: improve handling of using a function here vs. using a named property
 // probably needs a unified mechanism to deal with property/func to be used elsewhere
 mapmap.prototype.choropleth = function(spec, metadata, selection) {    
@@ -1134,6 +1161,7 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
     return this;
 };
 
+// TODO: this should be easily implemented using symbolizeAttribute and removed
 mapmap.prototype.strokeColor = function(spec, metadata, selection) {    
     // we have to remember the scale for legend()
     var colorScale = null,
@@ -1180,6 +1208,7 @@ mapmap.prototype.strokeColor = function(spec, metadata, selection) {
     return this;
 };
 
+// TODO: should we even have this, or put viz. techniques in a separate project/namespace?
 mapmap.prototype.proportional_circles = function(value, scale) {
     
     var valueFunc = keyOrCallback(value);
@@ -2502,6 +2531,7 @@ mapmap.legend.svg = function(range, labelFormat, histogram, options) {
 }
 
 mapmap.prototype.projection = function(projection) {
+    if (projection === undefined) return this._projection;
     this._projection = projection;
     return this;
 }
