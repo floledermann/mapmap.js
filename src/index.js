@@ -1125,26 +1125,38 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
     return this;
 };
 
-mapmap.prototype.symbolizeAttribute = function(attribute, reprAttribute, metaAttribute, selection) {
+mapmap.prototype.symbolizeAttribute = function(spec, reprAttribute, metaAttribute, selection) {
 
-    metaAttribute = metaAttribute || reprAttribute;
+    var defaultUndefinedAttributes = {
+        'stroke': 'transparent'  
+    };
     
+    var valueFunc = keyOrCallback(spec);
+
+    metaAttribute = metaAttribute || reprAttribute;    
     selection = selection || this.selected;
+
     
     var map = this;
     
     this.promise_data().then(function(data) {      
 
-        var metadata = map.getMetadata(attribute);
+        var metadata = map.getMetadata(spec);
 
         var scale = d3.scale[metadata.scale]();
         scale.domain(metadata.domain).range(metadata[metaAttribute]);
 
         map.symbolize(function(el, geom, data) {
-            el.attr(reprAttribute, scale(data[attribute]));
+            el.attr(reprAttribute, function(geom) {
+                var val = valueFunc(geom.properties);
+                if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
+                    return (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) || defaultUndefinedAttributes[reprAttribute];
+                }
+                return scale(val);
+            });
         }, selection);
 
-        map.updateLegend(attribute, reprAttribute, metadata, scale, selection);
+        map.updateLegend(spec, reprAttribute, metadata, scale, selection);
     });
     
     return this;
