@@ -2,8 +2,19 @@
 
 ## Trunk / Upcoming
 
+### New
+
+- New method `symbolizeAttribute()` to assign any SVG attributes on representations from data.
+
+### Changes
+
+- `.projection()` now returns the projection if called without parameters
 - New option for `.geomtry()`: `setExtent` (default: `true`) to determine whether map extent should be set to geometrie's extent on load
 - `.geometry()` now also accepts single GeoJSON objects
+
+### Fixes
+
+- Fix hoverInfo to hide properly on fast mouse movements
 
 ## 0.2.7
 
