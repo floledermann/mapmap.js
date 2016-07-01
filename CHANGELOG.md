@@ -4,6 +4,8 @@
 
 ### New
 
+- New method `zOrder()` to determine ordering of SVG elements
+- Symbols in HTML legend are all SVG based now, for flexibility and consistency.
 - New method `symbolizeAttribute()` to assign any SVG attributes from data.
 
 ### Changes
