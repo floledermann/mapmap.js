@@ -1393,7 +1393,7 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
     this.promise_data().then(function() {
         var obj = map.getRepresentations(options.selection);
         mouseover = function(d) {
-            // "this" is the element, not the map!
+            // "this" is the SVG element, not the map!
             // move to top = end of parent node
             // this screws up IE event handling!
             if (options.moveToFront && map.supports.hoverDomModification) {
@@ -1420,7 +1420,7 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
         map._oldPointerEvents = [];
         if (overCB) {
             obj
-                .on('mouseover', mouseover)
+                .on('mouseenter', mouseover)
                 .each(function(){
                     // TODO: not sure if this is the best idea, but we need to make sure
                     // to receive pointer events even if css disables them. This has to work
@@ -1436,19 +1436,23 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             ;
         }
         else {
-            obj.on('mouseover', null);
+            obj.on('mouseenter', null);
         }
         if (outCB) {
-            obj.on('mouseout', function() {
+            obj.on('mouseleave', function() {
                 if (this.__hoverinsertposition__) {
                     this.parentNode.insertBefore(this, this.__hoverinsertposition__);
                 }
-                if (outCB) outCB();
+                // we need to defer this call as well to make sure it is
+                // always called after overCB (see above Ffx workaround)
+                window.setTimeout(function(){
+                    outCB.call(map);   
+                }, 10);
             });
             hoverOutCallbacks.push(outCB);
         }
         else {
-            obj.on('mouseout', null);
+            obj.on('mouseleave', null);
         }          
     });
     return this;
@@ -1491,7 +1495,7 @@ mapmap.prototype.buildHTMLFunc = function(spec) {
                 if (val == 'NaN') val = d[part];
                 // TODO: make option "ignoreUndefined" etc.
                 if (val !== undefined && val !== meta.undefinedValue) {
-                    html += pre + prefix + val + ( meta.valueUnit ? ' ' + meta.valueUnit : '') + post;
+                    html += pre + prefix + val + ( meta.valueUnit ? '&nbsp;' + meta.valueUnit : '') + post;
                 }
                 else if (meta.undefinedLabel) {
                     html += pre + prefix + meta.undefinedLabel + post;
@@ -1512,7 +1516,10 @@ mapmap.prototype.hoverInfo = function(spec, options) {
         hoverStyle: {
             position: 'absolute',
             padding: '0.5em 0.7em',
-            'background-color': 'rgba(255,255,255,0.85)'
+            'background-color': 'rgba(255,255,255,0.85)',
+            // avoid clipping DIV to right edge of map 
+            'white-space': 'nowrap',
+            'z-index': '2'
         },
         hoverEnterStyle: {
             display: 'block'
