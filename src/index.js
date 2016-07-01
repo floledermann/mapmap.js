@@ -1059,12 +1059,16 @@ mapmap.prototype.autoSqrtScale = function(valueFunc) {
         .domain([0,stats.max]);    
 };
 
-mapmap.prototype.attr = function(spec, selection) {
+mapmap.prototype.attr = function(name, value, selection) {
+    if (dd.isDictionary(name) && value) {
+        selection = value;
+        value = undefined;
+    }
     this.symbolize(function(repr) {
-        repr.attr(spec);
+        repr.attr(name, value);
     }, selection);
     return this;
-}
+};
 
 mapmap.prototype.zOrder = function(comparator, options) {
     
