@@ -32,7 +32,7 @@ var default_settings = {
     pathAttributes: {
         'fill': 'none',
         'stroke': '#000',
-        'stroke-width': '0.2px',
+        'stroke-width': '0.2',
         'stroke-linejoin': 'bevel',
         'pointer-events': 'none'
     },
