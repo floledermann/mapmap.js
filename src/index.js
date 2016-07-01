@@ -2376,57 +2376,53 @@ mapmap.legend.html = function(options) {
                 }
             });
         
-        if (reprAttribute == 'fill') {
-            if (classes[0].representation.substring(0,4) != 'url(') {
-                newcells.append('span')
-                    .attr('class', 'legendColor')
-                    .style(options.colorBoxStyle)
-                    .append('span')
-                    .attr('class', 'fill')
-                    .style(options.colorFillStyle);
-                    
-                cells.select('.legendColor .fill')
-                    .transition()
-                    .style({
-                        'background-color': function(d) {return d.representation;},
-                        'border-color': function(d) {return d.representation;},
-                        'color': function(d) {return d.representation;}
-                    });
-            }
-            else {
-                newcells.append('svg')
-                    .attr('class', 'legendColor')
-                    .style(options.colorBoxStyle)
-                    .append('rect')
+        function updateRepresentations(newcells, cells, options) {
+        
+            newcells = newcells.append('svg')
+                .attr('class', 'legendColor')
+                .style(options.colorBoxStyle);
+                
+            if (reprAttribute == 'fill') {
+                newcells.append('rect')
                     .attr({
                         width: 100,
                         height: 100
+                    })
+                    .attr({
+                        'fill': function(d) {return d.representation;}
                     });
                     
                 cells.select('.legendColor rect')
+                    .transition()
                     .attr({
                         'fill': function(d) {return d.representation;}
                     });
             }
-        }
-        else if (reprAttribute == 'strokeColor') {
-        
-            newcells.append('span')
-                .attr('class', 'legendColor')
-                .style(options.colorBoxStyle)
-                .style('border', 'none')
-                .append('span')
-                .attr('class', 'fill')
-                .style(options.colorFillStyle);
+            else if (reprAttribute == 'stroke') {
+            
+                // construct attributes object from reprAttribute variable
+                var strokeAttrs = {};
+                strokeAttrs[reprAttribute] = function(d) {return d.representation;};
                 
-            cells.select('.legendColor .fill')
-                .transition()
-                .style({
-                    'background-color': function(d) {return d.representation;},
-                    'border-color': function(d) {return d.representation;},
-                    'color': function(d) {return d.representation;}
-                });
+                newcells.append('line')
+                    .attr({
+                        y1: 10,
+                        y2: 10,
+                        x1: 5,
+                        x2: 100,
+                        stroke: '#000000',
+                        'stroke-width': 3
+                    })
+                    .attr(strokeAttrs);
+                    
+                cells.select('.legendColor rect')
+                    .transition()
+                    .attr(strokeAttrs);
+
+            }
         }
+        
+        updateRepresentations(newcells, cells, options);
         
         newcells.append('span')
             .attr('class','legendLabel')
