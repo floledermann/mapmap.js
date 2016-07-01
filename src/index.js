@@ -1066,6 +1066,43 @@ mapmap.prototype.attr = function(spec, selection) {
     return this;
 }
 
+mapmap.prototype.zOrder = function(comparator, options) {
+    
+    options = dd.merge({
+        undefinedValue: Infinity
+    }, options);
+
+    if (dd.isString(comparator)) {
+        var fieldName = comparator;
+        var reverse = false;
+        if (fieldName[0] == "-") {
+            reverse = true;
+            fieldName = fieldName.substring(1);
+        }
+        comparator = function(a,b) {
+            var valA = a.properties[fieldName],
+                valB = b.properties[fieldName];
+                
+            if (valA === undefined || isNaN(valA)) {
+                valA = options.undefinedValue;
+            }
+            if (valB === undefined || isNaN(valB)) {
+                valB = options.undefinedValue;
+            }
+            var result = valA - valB;
+            if (reverse) result *= -1;
+            return result;
+        }
+    }
+    
+    var map = this;
+    this.promise_data().then(function(data) {      
+        map.getRepresentations()
+            .sort(comparator);
+    });
+    return this;
+};
+
 // TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
 // either this should be unified, or the distinctions clearly worked out
 mapmap.prototype.symbolize = function(callback, selection, finalize) {
