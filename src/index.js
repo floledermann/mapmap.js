@@ -2342,7 +2342,9 @@ mapmap.legend.html = function(options) {
             color: '#999999',
             'background-color': '#dddddd'
         },
-        histogramBarWidth: 1
+        histogramBarWidth: 1,
+        reverse: false,
+        order: null
     };
     
     options = mapmap.extend(DEFAULTS, options);
@@ -2383,8 +2385,16 @@ mapmap.legend.html = function(options) {
         if (metadata.scale != 'ordinal') {
             classes.reverse();
         }
+        if (options.reverse) {
+            classes.reverse();
+        }
         if (undefinedClass) {
             classes.push(undefinedClass);
+        }
+        
+        if (options.order) {
+            assert(dd.isFunction(options.order), "LegendOptions.order must be a comparator function!");
+            classes.sort(options.order);       
         }
         
         var cells = legend.selectAll('div.legendCell')
