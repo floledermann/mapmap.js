@@ -900,7 +900,7 @@ var MetaData = function(fields, localeProvider) {
     if (!(this instanceof MetaData)) return new MetaData(fields, localeProvider);
     mapmap.extend(this, fields);
     // take default from locale
-    if (!this.undefinedLabel) this.undefinedLabel = localeProvider.locale.undefinedLabel;
+    if (this.undefinedLabel === undefined) this.undefinedLabel = localeProvider.locale.undefinedLabel;
     
     this.format = function(val) {
         if (!this._format) {
@@ -1087,10 +1087,10 @@ mapmap.prototype.zOrder = function(comparator, options) {
             var valA = a.properties[fieldName],
                 valB = b.properties[fieldName];
                 
-            if (valA === undefined || isNaN(valA)) {
+            if (!dd.isNumeric(valA)) {
                 valA = options.undefinedValue;
             }
-            if (valB === undefined || isNaN(valB)) {
+            if (!dd.isNumeric(valB)) {
                 valB = options.undefinedValue;
             }
             var result = valA - valB;
@@ -1603,26 +1603,35 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     }
     
     function show(d, point){
-        // offsetParent only works for rendered objects, so place object first!
-        // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.style(options.hoverEnterStyle);  
+    
+        var html = htmlFunc(d);
         
-        var offsetEl = hoverEl.node().offsetParent || hoverEl,
-            mainEl = this._elements.main.node(),
-            bounds = this.getBoundingClientRect(),
-            offsetBounds = offsetEl.getBoundingClientRect(),
-            scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-            scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
-            top = bounds.top - offsetBounds.top,
-            left = bounds.left - offsetBounds.left;
+        if (html) {
+            // offsetParent only works for rendered objects, so place object first!
+            // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
+            hoverEl.style(options.hoverEnterStyle);  
+            
+            var offsetEl = hoverEl.node().offsetParent || hoverEl,
+                mainEl = this._elements.main.node(),
+                bounds = this.getBoundingClientRect(),
+                offsetBounds = offsetEl.getBoundingClientRect(),
+                scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+                scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
+                top = bounds.top - offsetBounds.top,
+                left = bounds.left - offsetBounds.left;
 
-        hoverEl
-            .style({
-                bottom: (offsetBounds.height - top - point.y) + 'px',
-                //top: point.y + 'px',
-                left: (left + point.x) + 'px'
-            })
-            .html(htmlFunc(d));
+            if (getComputedStyle(offsetEl).getPropertyValue('position') == 'static') {
+                console.warn("mapmap.js Warning: hoverInfo parent element needs to be positioned (relative or absolute) for positioning to work properly!");
+            }
+                
+            hoverEl
+                .style({
+                    bottom: (offsetBounds.height - top - point.y) + 'px',
+                    //top: point.y + 'px',
+                    left: (left + point.x) + 'px'
+                })
+                .html(html);
+        }
     }
     function hide() {
         hoverEl.style(options.hoverLeaveStyle);
@@ -2258,9 +2267,17 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
     
     var undefinedClass = null;
     // TODO: hack to get undefined color box
-    if (reprAttribute == 'fill' && metadata.undefinedColor != 'transparent') {
+    if (reprAttribute == 'fill' && (metadata.undefinedColor != 'transparent' || (metadata.undefinedValues && metadata.undefinedValues.fill != 'transparent'))) {
         undefinedClass = {
-            representation: metadata.undefinedColor,
+            representation: metadata.undefinedColor || metadata.undefinedValues.fill,
+            'class': 'undefined',
+            count: counter(null),
+            objects: objects(null)
+        };
+    }
+    else if (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) {
+        undefinedClass = {
+            representation: metadata.undefinedValues[reprAttribute],
             'class': 'undefined',
             count: counter(null),
             objects: objects(null)
