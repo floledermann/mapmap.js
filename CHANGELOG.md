@@ -10,6 +10,7 @@
 
 ### Changes
 
+- `hoverInfo()` shows up only if there is text to be shown
 - `.projection()` now returns the projection if called without parameters
 - New option for `.geomtry()`: `setExtent` (default: `true`) to determine whether map extent should be set to geometrie's extent on load
 - `.geometry()` now also accepts single GeoJSON objects
