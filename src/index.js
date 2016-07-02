@@ -2361,7 +2361,7 @@ mapmap.legend.html = function(options) {
         };
     });
     
-    return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
+    var legend_func = function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
         var legend = this._elements.parent.select('.' + options.legendClassName);
         if (legend.empty()) {
@@ -2494,6 +2494,12 @@ mapmap.legend.html = function(options) {
         
         if (options.callback) options.callback();
     }
+    
+    legend_func.clear = function() {
+        this._elements.parent.select('.' + options.legendClassName).remove();
+    }
+    
+    return legend_func;
 }
 
 mapmap.legend.svg = function(range, labelFormat, histogram, options) {
