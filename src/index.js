@@ -1065,7 +1065,14 @@ mapmap.prototype.attr = function(name, value, selection) {
         value = undefined;
     }
     this.symbolize(function(repr) {
-        repr.attr(name, value);
+        // d3 checks for arguments.length, so we need to explicitly distinguish 
+        // dictionary and name/value cases
+        if (value === undefined) {
+            repr.attr(name);
+        }
+        else {
+            repr.attr(name, value);
+        }
     }, selection);
     return this;
 };
