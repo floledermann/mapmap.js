@@ -679,7 +679,7 @@ var default_settings = {
     pathAttributes: {
         'fill': 'none',
         'stroke': '#000',
-        'stroke-width': '0.2px',
+        'stroke-width': '0.2',
         'stroke-linejoin': 'bevel',
         'pointer-events': 'none'
     },
@@ -1547,7 +1547,7 @@ var MetaData = function(fields, localeProvider) {
     if (!(this instanceof MetaData)) return new MetaData(fields, localeProvider);
     mapmap.extend(this, fields);
     // take default from locale
-    if (!this.undefinedLabel) this.undefinedLabel = localeProvider.locale.undefinedLabel;
+    if (this.undefinedLabel === undefined) this.undefinedLabel = localeProvider.locale.undefinedLabel;
     
     this.format = function(val) {
         if (!this._format) {
@@ -1706,12 +1706,60 @@ mapmap.prototype.autoSqrtScale = function(valueFunc) {
         .domain([0,stats.max]);    
 };
 
-mapmap.prototype.attr = function(spec, selection) {
+mapmap.prototype.attr = function(name, value, selection) {
+    if (dd.isDictionary(name) && value) {
+        selection = value;
+        value = undefined;
+    }
     this.symbolize(function(repr) {
-        repr.attr(spec);
+        // d3 checks for arguments.length, so we need to explicityl distinguish 
+        // dictionary and name/value cases
+        if (value === undefined) {
+            repr.attr(name);
+        }
+        else {
+            repr.attr(name, value);
+        }
     }, selection);
     return this;
-}
+};
+
+mapmap.prototype.zOrder = function(comparator, options) {
+    
+    options = dd.merge({
+        undefinedValue: Infinity
+    }, options);
+
+    if (dd.isString(comparator)) {
+        var fieldName = comparator;
+        var reverse = false;
+        if (fieldName[0] == "-") {
+            reverse = true;
+            fieldName = fieldName.substring(1);
+        }
+        comparator = function(a,b) {
+            var valA = a.properties[fieldName],
+                valB = b.properties[fieldName];
+                
+            if (!dd.isNumeric(valA)) {
+                valA = options.undefinedValue;
+            }
+            if (!dd.isNumeric(valB)) {
+                valB = options.undefinedValue;
+            }
+            var result = valA - valB;
+            if (reverse) result *= -1;
+            return result;
+        }
+    }
+    
+    var map = this;
+    this.promise_data().then(function(data) {      
+        map.getRepresentations()
+            .sort(comparator);
+    });
+    return this;
+};
 
 // TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
 // either this should be unified, or the distinctions clearly worked out
@@ -1731,26 +1779,42 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
     return this;
 };
 
-mapmap.prototype.symbolizeAttribute = function(attribute, reprAttribute, metaAttribute, selection) {
+mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options) {
 
-    metaAttribute = metaAttribute || reprAttribute;
+    options = dd.merge({
+        metaAttribute: reprAttribute,
+        selection: this.selected,
+        legend: true
+    }, options);
+
+    var defaultUndefinedAttributes = {
+        'stroke': 'transparent'  
+    };
     
-    selection = selection || this.selected;
-    
+    var valueFunc = keyOrCallback(property);
+
     var map = this;
     
     this.promise_data().then(function(data) {      
 
-        var metadata = map.getMetadata(attribute);
+        var metadata = map.getMetadata(property);
 
         var scale = d3.scale[metadata.scale]();
-        scale.domain(metadata.domain).range(metadata[metaAttribute]);
+        scale.domain(metadata.domain).range(metadata[options.metaAttribute]);
 
         map.symbolize(function(el, geom, data) {
-            el.attr(reprAttribute, scale(data[attribute]));
-        }, selection);
+            el.attr(reprAttribute, function(geom) {
+                var val = valueFunc(geom.properties);
+                if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
+                    return (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) || defaultUndefinedAttributes[reprAttribute];
+                }
+                return scale(val);
+            });
+        }, options.selection);
 
-        map.updateLegend(attribute, reprAttribute, metadata, scale, selection);
+        if (options.legend) {
+            map.updateLegend(property, reprAttribute, metadata, scale, options.selection);
+        }
     });
     
     return this;
@@ -2197,26 +2261,35 @@ mapmap.prototype.hoverInfo = function(spec, options) {
     }
     
     function show(d, point){
-        // offsetParent only works for rendered objects, so place object first!
-        // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
-        hoverEl.style(options.hoverEnterStyle);  
+    
+        var html = htmlFunc(d);
         
-        var offsetEl = hoverEl.node().offsetParent || hoverEl,
-            mainEl = this._elements.main.node(),
-            bounds = this.getBoundingClientRect(),
-            offsetBounds = offsetEl.getBoundingClientRect(),
-            scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
-            scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
-            top = bounds.top - offsetBounds.top,
-            left = bounds.left - offsetBounds.left;
+        if (html) {
+            // offsetParent only works for rendered objects, so place object first!
+            // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
+            hoverEl.style(options.hoverEnterStyle);  
+            
+            var offsetEl = hoverEl.node().offsetParent || hoverEl,
+                mainEl = this._elements.main.node(),
+                bounds = this.getBoundingClientRect(),
+                offsetBounds = offsetEl.getBoundingClientRect(),
+                scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0,
+                scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0,
+                top = bounds.top - offsetBounds.top,
+                left = bounds.left - offsetBounds.left;
 
-        hoverEl
-            .style({
-                bottom: (offsetBounds.height - top - point.y) + 'px',
-                //top: point.y + 'px',
-                left: (left + point.x) + 'px'
-            })
-            .html(htmlFunc(d));
+            if (getComputedStyle(offsetEl).getPropertyValue('position') == 'static') {
+                console.warn("mapmap.js Warning: hoverInfo parent element needs to be positioned (relative or absolute) for positioning to work properly!");
+            }
+                
+            hoverEl
+                .style({
+                    bottom: (offsetBounds.height - top - point.y) + 'px',
+                    //top: point.y + 'px',
+                    left: (left + point.x) + 'px'
+                })
+                .html(html);
+        }
     }
     function hide() {
         hoverEl.style(options.hoverLeaveStyle);
@@ -2852,9 +2925,17 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
     
     var undefinedClass = null;
     // TODO: hack to get undefined color box
-    if (reprAttribute == 'fill' && metadata.undefinedColor != 'transparent') {
+    if (reprAttribute == 'fill' && (metadata.undefinedColor != 'transparent' || (metadata.undefinedValues && metadata.undefinedValues.fill != 'transparent'))) {
         undefinedClass = {
-            representation: metadata.undefinedColor,
+            representation: metadata.undefinedColor || metadata.undefinedValues.fill,
+            'class': 'undefined',
+            count: counter(null),
+            objects: objects(null)
+        };
+    }
+    else if (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) {
+        undefinedClass = {
+            representation: metadata.undefinedValues[reprAttribute],
             'class': 'undefined',
             count: counter(null),
             objects: objects(null)
@@ -2908,7 +2989,9 @@ mapmap.legend.html = function(options) {
             color: '#999999',
             'background-color': '#dddddd'
         },
-        histogramBarWidth: 1
+        histogramBarWidth: 1,
+        reverse: false,
+        order: null
     };
     
     options = mapmap.extend(DEFAULTS, options);
@@ -2927,7 +3010,7 @@ mapmap.legend.html = function(options) {
         };
     });
     
-    return function(attribute, reprAttribute, metadata, classes, undefinedClass) {
+    var legend_func = function(attribute, reprAttribute, metadata, classes, undefinedClass) {
     
         var legend = this._elements.parent.select('.' + options.legendClassName);
         if (legend.empty()) {
@@ -2949,8 +3032,16 @@ mapmap.legend.html = function(options) {
         if (metadata.scale != 'ordinal') {
             classes.reverse();
         }
+        if (options.reverse) {
+            classes.reverse();
+        }
         if (undefinedClass) {
             classes.push(undefinedClass);
+        }
+        
+        if (options.order) {
+            assert(dd.isFunction(options.order), "LegendOptions.order must be a comparator function!");
+            classes.sort(options.order);       
         }
         
         var cells = legend.selectAll('div.legendCell')
@@ -2970,57 +3061,53 @@ mapmap.legend.html = function(options) {
                 }
             });
         
-        if (reprAttribute == 'fill') {
-            if (classes[0].representation.substring(0,4) != 'url(') {
-                newcells.append('span')
-                    .attr('class', 'legendColor')
-                    .style(options.colorBoxStyle)
-                    .append('span')
-                    .attr('class', 'fill')
-                    .style(options.colorFillStyle);
-                    
-                cells.select('.legendColor .fill')
-                    .transition()
-                    .style({
-                        'background-color': function(d) {return d.representation;},
-                        'border-color': function(d) {return d.representation;},
-                        'color': function(d) {return d.representation;}
-                    });
-            }
-            else {
-                newcells.append('svg')
-                    .attr('class', 'legendColor')
-                    .style(options.colorBoxStyle)
-                    .append('rect')
+        function updateRepresentations(newcells, cells, options) {
+        
+            newcells = newcells.append('svg')
+                .attr('class', 'legendColor')
+                .style(options.colorBoxStyle);
+                
+            if (reprAttribute == 'fill') {
+                newcells.append('rect')
                     .attr({
                         width: 100,
                         height: 100
+                    })
+                    .attr({
+                        'fill': function(d) {return d.representation;}
                     });
                     
                 cells.select('.legendColor rect')
+                    .transition()
                     .attr({
                         'fill': function(d) {return d.representation;}
                     });
             }
-        }
-        else if (reprAttribute == 'strokeColor') {
-        
-            newcells.append('span')
-                .attr('class', 'legendColor')
-                .style(options.colorBoxStyle)
-                .style('border', 'none')
-                .append('span')
-                .attr('class', 'fill')
-                .style(options.colorFillStyle);
+            else if (reprAttribute == 'stroke') {
+            
+                // construct attributes object from reprAttribute variable
+                var strokeAttrs = {};
+                strokeAttrs[reprAttribute] = function(d) {return d.representation;};
                 
-            cells.select('.legendColor .fill')
-                .transition()
-                .style({
-                    'background-color': function(d) {return d.representation;},
-                    'border-color': function(d) {return d.representation;},
-                    'color': function(d) {return d.representation;}
-                });
+                newcells.append('line')
+                    .attr({
+                        y1: 10,
+                        y2: 10,
+                        x1: 5,
+                        x2: 100,
+                        stroke: '#000000',
+                        'stroke-width': 3
+                    })
+                    .attr(strokeAttrs);
+                    
+                cells.select('.legendColor rect')
+                    .transition()
+                    .attr(strokeAttrs);
+
+            }
         }
+        
+        updateRepresentations(newcells, cells, options);
         
         newcells.append('span')
             .attr('class','legendLabel')
@@ -3064,6 +3151,12 @@ mapmap.legend.html = function(options) {
         
         if (options.callback) options.callback();
     }
+    
+    legend_func.clear = function() {
+        this._elements.parent.select('.' + options.legendClassName).remove();
+    }
+    
+    return legend_func;
 }
 
 mapmap.legend.svg = function(range, labelFormat, histogram, options) {
