@@ -733,7 +733,7 @@ var mapmap = function(element, options) {
     element = d3.select(element).node();
  
     // defaults
-    this._projection = d3.geo.mercator().scale(1);
+    this.projection(d3.geo.mercator().scale(1));
     
     this.initEngine(element);
     this.initEvents(element);
@@ -780,7 +780,6 @@ mapmap.prototype.initEngine = function(element) {
         geometry: mapEl.append('g').attr('class', 'geometry'),
         overlay: mapEl.append('g').attr('class', 'overlays'),
         fixed: mainEl.append('g').attr('class', 'fixed'),
-        legend: mainEl.append('g').attr('class', 'legend'),
         placeholder: mainEl.select('.' + this.settings.placeholderClassName)
     };
     
@@ -927,6 +926,18 @@ mapmap.prototype.initEngine = function(element) {
     });
 
 };
+
+mapmap.prototype.getGeometryPane = function() {
+    return this._elements.geometry;
+}
+
+mapmap.prototype.getOverlayPane = function() {
+    return this._elements.overlay;
+}
+
+mapmap.prototype.getFixedPane = function() {
+    return this._elements.fixed;
+}
 
 mapmap.prototype.initEvents = function(element) {
     var map = this;
@@ -1214,8 +1225,6 @@ mapmap.prototype.draw = function() {
     
     var map = this;
     
-    var pathGenerator = d3.geo.path().projection(this._projection);
-
     if (this._elements.placeholder) {
         this._elements.placeholder.remove();
         this._elements.placeholder = null;
@@ -1236,7 +1245,7 @@ mapmap.prototype.draw = function() {
             geomSel
                 .enter()
                 .append('path')
-                .attr('d', pathGenerator)
+                .attr('d', map.getPathGenerator())
                 .attr(map.settings.pathAttributes)
                 .each(function(d) {
                     // link data object to its representation
@@ -1420,15 +1429,6 @@ mapmap.prototype.getData = function(key, selection) {
         });
     });
 };
-
-mapmap.prototype.getOverlayContext = function() {
-    return this._elements.overlay;
-};
-
-mapmap.prototype.project = function(point) {
-    return this._projection(point);
-};
-
 
 mapmap.prototype.promise_data = function(promise) {
     // chain a new promise to the data promise
@@ -1712,7 +1712,7 @@ mapmap.prototype.attr = function(name, value, selection) {
         value = undefined;
     }
     this.symbolize(function(repr) {
-        // d3 checks for arguments.length, so we need to explicityl distinguish 
+        // d3 checks for arguments.length, so we need to explicitly distinguish 
         // dictionary and name/value cases
         if (value === undefined) {
             repr.attr(name);
@@ -1761,8 +1761,6 @@ mapmap.prototype.zOrder = function(comparator, options) {
     return this;
 };
 
-// TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
-// either this should be unified, or the distinctions clearly worked out
 mapmap.prototype.symbolize = function(callback, selection, finalize) {
 
     var map = this;
@@ -1782,6 +1780,7 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
 mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options) {
 
     options = dd.merge({
+        //metadata: null, // taken from map metadata
         metaAttribute: reprAttribute,
         selection: this.selected,
         legend: true
@@ -1797,10 +1796,17 @@ mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options)
     
     this.promise_data().then(function(data) {      
 
-        var metadata = map.getMetadata(property);
+        var metadata = options.metadata;
+        
+        if (dd.isString(metadata)) {
+            metadata = map.getMetadata(metadata);
+        }
+        if (!metadata) {
+            metadata = options.metadata || map.getMetadata(property);
+        }
 
         var scale = d3.scale[metadata.scale]();
-        scale.domain(metadata.domain).range(metadata[options.metaAttribute]);
+        scale.domain(metadata.domain).range(metadata[reprAttribute]);
 
         map.symbolize(function(el, geom, data) {
             el.attr(reprAttribute, function(geom) {
@@ -1821,10 +1827,21 @@ mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options)
     
 }
 
+// legacy method - this has moved to the mapmap.symbolize namespace
+mapmap.prototype.choropleth = function(spec, metadata, selection) {
+
+    this.symbolize(mapmap.symbolize.choropleth(spec, metadata, selection), selection, function(){
+        this.dispatcher.choropleth.call(this, spec);
+    });
+    
+    return this;
+}
+
+mapmap.symbolize = {};
 
 // TODO: improve handling of using a function here vs. using a named property
 // probably needs a unified mechanism to deal with property/func to be used elsewhere
-mapmap.prototype.choropleth = function(spec, metadata, selection) {    
+mapmap.symbolize.choropleth = function(spec, metadata, selection) {    
     // we have to remember the scale for legend()
     var colorScale = null,
         valueFunc = keyOrCallback(spec),
@@ -1864,127 +1881,39 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             return colorScale(val) || map.settings.pathAttributes.fill;
         });
     }
-    
-    this.symbolize(color, selection, function(){
-        this.dispatcher.choropleth.call(this, spec);
-    });
-        
-    return this;
+
+    return color;
 };
 
-// TODO: this should be easily implemented using symbolizeAttribute and removed
-mapmap.prototype.strokeColor = function(spec, metadata, selection) {    
-    // we have to remember the scale for legend()
-    var colorScale = null,
-        valueFunc = keyOrCallback(spec),
-        map = this;
-        
-    function color(el, geom, data) {
-        if (spec === null) {
-            // clear
-            el.attr('stroke', this.settings.pathAttributes.stroke);
-            return;
-        }
-        // on first call, set up scale & legend
-        if (!colorScale) {
-            // TODO: improve handling of things that need the data, but should be performed
-            // only once. Should we provide a separate callback for this, or use the 
-            // promise_data().then() for setup? As this could be considered a public API usecase,
-            // maybe using promises is a bit steep for outside users?
-            if (typeof metadata == 'string') {
-                metadata = this.getMetadata(metadata);
-            }
-            if (!metadata) {
-                metadata = this.getMetadata(spec);
-            }
-            colorScale = this.autoColorScale(spec, metadata, selection);
-            this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
-        }
-        if (el.attr('stroke') != 'none') {
-            // transition if color already set
-            el = el.transition();
-        }
-        el.attr('stroke', function(geom) {           
-            var val = valueFunc(geom.properties);
-            // check if value is undefined or null
-            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
-                return metadata.undefinedColor || map.settings.pathAttributes.stroke;
-            }
-            return colorScale(val) || map.settings.pathAttributes.stroke;
-        });
-    }
-    
-    this.symbolize(color, selection);
-        
-    return this;
-};
 
-// TODO: should we even have this, or put viz. techniques in a separate project/namespace?
-mapmap.prototype.proportional_circles = function(value, scale) {
+mapmap.symbolize.addLabel = function(spec, textAttributes) {
     
-    var valueFunc = keyOrCallback(value);
+    textAttributes = dd.merge({
+        stroke: '#ffffff',
+        fill: '#000000',
+        'font-size': 9,
+        'paint-order': 'stroke fill',
+        'alignment-baseline': 'middle',
+        'text-anchor': 'middle',
+        dx: 0,
+        dy: 1
+    }, textAttributes);
 
-    var pathGenerator = d3.geo.path().projection(this._projection);    
-    
-    scale = scale || 20;
-    
-    this.symbolize(function(el, geom, data) {
-        if (value === null) {
-            this._elements.overlay.select('circle').remove();
-        }
-        else if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
-            // if scale is not set, calculate scale on first call
-            if (typeof scale != 'function') {
-                scale = this.autoSqrtScale(valueFunc).range([0,scale]);
-            }
-            var centroid = pathGenerator.centroid(geom);
-            this._elements.overlay.append('circle')
-                .attr(this.settings.overlayAttributes)
-                .attr({
-                    r: scale(valueFunc(geom.properties)),
-                    cx: centroid[0],
-                    cy: centroid[1]
-                });
-        }
-    });
-    return this;
-};
-
-mapmap.symbolize = {};
-
-mapmap.symbolize.addLabel = function(spec) {
 
     var valueFunc = keyOrCallback(spec);
         
-    var pathGenerator = d3.geo.path();    
-
     return function(el, geom, data) {
-        // lazy initialization of projection
-        // we dont't have access to the map above, and also projection
-        // may not have been initialized correctly
-        if (pathGenerator.projection() !== this._projection) {
-            pathGenerator.projection(this._projection);
-        }
 
-        // TODO: how to properly remove symbolizations?
         if (spec === null) {
-            this._elements.overlay.select('circle').remove();
+            this.getOverlayPane().select('text').remove();
             return;
         }
         
         if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
-            var centroid = pathGenerator.centroid(geom);
-            this._elements.overlay.append('text')
+            var centroid = this.getPathGenerator().centroid(geom);
+            this.getOverlayPane().append('text')
                 .text(valueFunc(geom.properties))
-                .attr({
-                    stroke: '#ffffff',
-                    fill: '#000000',
-                    'font-size': 9,
-                    'paint-order': 'stroke fill',
-                    'alignment-baseline': 'middle',
-                    dx: 7,
-                    dy: 1
-                })
+                .attr(textAttributes)
                 .attr({                    
                     x: centroid[0],
                     y: centroid[1]
@@ -1994,23 +1923,23 @@ mapmap.symbolize.addLabel = function(spec) {
     }
 }
 
+mapmap.symbolize.addTitle = addOptionalElement('title');
+mapmap.symbolize.addDesc = addOptionalElement('desc');
+
 function addOptionalElement(elementName) {
     return function(value) {
         var valueFunc = keyOrCallback(value);
-        this.symbolize(function(el, d) {  
+        return function(el, d) {  
             if (value === null) {
                 el.select(elementName).remove();
                 return;
             }
             el.append(elementName)
                 .text(valueFunc(d.properties));
-        });
-        return this;
+        };
     };
 }
 
-mapmap.prototype.title = addOptionalElement('title');
-mapmap.prototype.desc = addOptionalElement('desc');
 
 var center = {
     x: 0.5,
@@ -2092,7 +2021,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40},
         selection: null,
-        anchorPosition: this.getAnchorForRepr
+        anchorPosition: this.getAnchorForRepr,
+        hoverPathStyle: {
+            'pointer-events': 'visiblePainted'
+        }
      }, options);
     
     var map = this;
@@ -2115,6 +2047,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             
             var el = this,
                 event = d3.event;
+            
+            var sel = d3.select(this);
+            this._oldstyle = sel.attr('style');
+            sel.style(options.hoverPathStyle);
             
             // In Firefox the event positions are not populated properly in some cases
             // Defer call to allow browser to populate the event
@@ -2147,13 +2083,19 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             ;
         }
         else {
-            obj.on('mouseenter', null);
+            obj.on('mouseenter', function() {
+                var sel = d3.select(this);
+                this._oldstyle = sel.attr('style');
+                sel.style(options.hoverPathStyle);
+            });
         }
         if (outCB) {
             obj.on('mouseleave', function() {
+                console.log("resetting");
                 if (this.__hoverinsertposition__) {
                     this.parentNode.insertBefore(this, this.__hoverinsertposition__);
                 }
+                d3.select(this).attr('style', this._oldstyle || '');
                 // we need to defer this call as well to make sure it is
                 // always called after overCB (see above Ffx workaround)
                 window.setTimeout(function(){
@@ -2163,7 +2105,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             hoverOutCallbacks.push(outCB);
         }
         else {
-            obj.on('mouseleave', null);
+            obj.on('mouseleave', function() {
+                console.log("resetting");
+                d3.select(this).attr('style', this._oldstyle || '');            
+            });
         }          
     });
     return this;
@@ -2385,7 +2330,7 @@ mapmap.behavior.zoom = function(options) {
         }
         
         if (options.showRing && !ring) {
-            ring = map._elements.fixed.selectAll('g.zoomRing')
+            ring = map.getFixedPane().selectAll('g.zoomRing')
                 .data([1]);
             
             var newring = ring.enter()
@@ -2605,7 +2550,7 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
 
     var sel = this.getRepresentations(selection),
         bounds = [[Infinity,Infinity],[-Infinity, -Infinity]],
-        pathGenerator = d3.geo.path().projection(this._projection);    
+        pathGenerator = this.getPathGenerator();
     
     sel.each(function(el){
         var b = pathGenerator.bounds(el);
@@ -3159,128 +3104,19 @@ mapmap.legend.html = function(options) {
     return legend_func;
 }
 
-mapmap.legend.svg = function(range, labelFormat, histogram, options) {
-
-    var DEFAULTS = {
-        cellSpacing: 5,
-        layout: 'vertical',
-        histogram: false,
-        histogramLength: 80,
-        containerAttributes: {
-            transform: 'translate(20,10)'
-        },
-        backgroundAttributes: {
-            fill: '#fff',
-            'fill-opacity': 0.9,
-            x: -10,
-            y: -10,
-            width: 220
-        },
-        cellAttributes: {
-        },
-        colorAttributes: {
-            'width': 40,
-            'height': 18,
-            'stroke': '#000',
-            'stroke-width': '0.5px',
-            'fill': '#fff'  // this will be used before first transition
-        },
-        textAttributes: {
-            'font-size': 10,
-            'pointer-events': 'none',
-            dy: 12
-        },
-        histogramBarAttributes: {
-            width: 0,
-            x: 140,
-            y: 4,
-            height: 10,
-            fill: '#000',
-            'fill-opacity': 0.2
-        }
-    };
-
-    // TODO: we can't integrate thes into settings because it references settings attributes
-    var layouts = {
-        'horizontal': {
-            cellAttributes: {
-                transform: function(d,i){ return 'translate(' + i * (options.colorAttributes.width + options.cellSpacing) + ',0)';}
-            },
-            textAttributes: {
-                y: function() { return options.colorAttributes.height + options.cellSpacing;}
-                
-            }
-        },
-        'vertical': {
-            cellAttributes: {
-                transform: function(d,i){ return 'translate(0,' + i * (options.colorAttributes.height + options.cellSpacing) + ')';}
-            },
-            textAttributes: {
-                x: function() { return options.colorAttributes.width + options.cellSpacing;},
-            }
-        }
-    };
-
-    var layout = layouts[options.layout];
-    
-    if (options.layout == 'vertical') {
-        range.reverse();
-    }
-    
-    this._elements.legend.attr(options.containerAttributes);
- 
-    var bg = this._elements.legend.selectAll('rect.background')
-        .data([1]);
-    
-    bg.enter()
-        .append('rect')
-        .attr('class', 'background')
-        .attr(options.backgroundAttributes);
-    bg.transition().attr('height', histogram.length * (options.colorAttributes.height + options.cellSpacing) + (20 - options.cellSpacing));    
-        
-    var cells = this._elements.legend.selectAll('g.cell')
-        .data(range);
-    
-    cells.exit().remove();
-    
-    var newcells = cells.enter()
-        .append('g')
-        .attr('class', 'cell')
-        .attr(options.cellAttributes)
-        .attr(layout.cellAttributes);
-        
-    newcells.append('rect')
-        .attr('class', 'color')
-        .attr(options.colorAttributes)
-        .attr(layout.colorAttributes);
-                
-    if (options.histogram) {
-
-        newcells.append('rect')
-            .attr("class", "bar")
-            .attr(options.histogramBarAttributes);
-
-        cells.select('.bar').transition()
-            .attr("width", function(d,i){
-                return histogram[histogram.length-i-1].y * options.histogramLength;
-            });
-    }
-
-    newcells.append('text')
-        .attr(options.textAttributes)
-        .attr(layout.textAttributes);
-    
-    cells.select('.color').transition()
-        .attr('fill', function(d) {return d;});
-    
-    cells.select('text')
-        .text(labelFormat);
-}
-
 mapmap.prototype.projection = function(projection) {
     if (projection === undefined) return this._projection;
     this._projection = projection;
+    this._pathGenerator = d3.geo.path().projection(projection);
     return this;
+}
+
+mapmap.prototype.project = function(point) {
+    return this._projection(point);
+};
+
+mapmap.prototype.getPathGenerator = function() {
+    return this._pathGenerator;
 }
 
 mapmap.prototype.extent = function(selection, options) {
@@ -3333,7 +3169,7 @@ mapmap.prototype._extent = function(geom, options) {
     
     // reset scale to be able to calculate extents of geometry
     this._projection.scale(1).translate([0, 0]);
-    var pathGenerator = d3.geo.path().projection(this._projection);
+    var pathGenerator = this.getPathGenerator();
     var bounds = pathGenerator.bounds(geom);
     // use absolute values, as east does not always have to be right of west!
     bounds.height = Math.abs(bounds[1][1] - bounds[0][1]);
