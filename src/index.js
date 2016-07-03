@@ -1374,7 +1374,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
         clipToViewport: true,
         clipMargins: {top: 40, left: 40, bottom: 0, right: 40},
         selection: null,
-        anchorPosition: this.getAnchorForRepr
+        anchorPosition: this.getAnchorForRepr,
+        hoverRepresentationStyle: {
+            'pointer-events': 'visiblePainted'
+        }
      }, options);
     
     var map = this;
@@ -1397,6 +1400,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             
             var el = this,
                 event = d3.event;
+            
+            var sel = d3.select(this);
+            this._oldstyle = sel.attr('style');
+            sel.style(options.hoverRepresentationStyle);
             
             // In Firefox the event positions are not populated properly in some cases
             // Defer call to allow browser to populate the event
@@ -1429,13 +1436,19 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             ;
         }
         else {
-            obj.on('mouseenter', null);
+            obj.on('mouseenter', function() {
+                var sel = d3.select(this);
+                this._oldstyle = sel.attr('style');
+                sel.style(options.hoverRepresentationStyle);
+            });
         }
         if (outCB) {
             obj.on('mouseleave', function() {
+                console.log("resetting");
                 if (this.__hoverinsertposition__) {
                     this.parentNode.insertBefore(this, this.__hoverinsertposition__);
                 }
+                d3.select(this).attr('style', this._oldstyle || '');
                 // we need to defer this call as well to make sure it is
                 // always called after overCB (see above Ffx workaround)
                 window.setTimeout(function(){
@@ -1445,7 +1458,10 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
             hoverOutCallbacks.push(outCB);
         }
         else {
-            obj.on('mouseleave', null);
+            obj.on('mouseleave', function() {
+                console.log("resetting");
+                d3.select(this).attr('style', this._oldstyle || '');            
+            });
         }          
     });
     return this;
