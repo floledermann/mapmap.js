@@ -1812,7 +1812,7 @@ mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options)
             el.attr(reprAttribute, function(geom) {
                 var val = valueFunc(geom.properties);
                 if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
-                    return (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) || defaultUndefinedAttributes[reprAttribute];
+                    return (metadata.undefinedSymbols && metadata.undefinedSymbols[reprAttribute]) || defaultUndefinedAttributes[reprAttribute];
                 }
                 return scale(val);
             });
@@ -2868,17 +2868,17 @@ mapmap.prototype.updateLegend = function(attribute, reprAttribute, metadata, sca
     
     var undefinedClass = null;
     // TODO: hack to get undefined color box
-    if (reprAttribute == 'fill' && (metadata.undefinedColor != 'transparent' || (metadata.undefinedValues && metadata.undefinedValues.fill != 'transparent'))) {
+    if (reprAttribute == 'fill' && (metadata.undefinedColor != 'transparent' || (metadata.undefinedSymbols && metadata.undefinedSymbols.fill != 'transparent'))) {
         undefinedClass = {
-            representation: metadata.undefinedColor || metadata.undefinedValues.fill,
+            representation: metadata.undefinedColor || metadata.undefinedSymbols.fill,
             'class': 'undefined',
             count: counter(null),
             objects: objects(null)
         };
     }
-    else if (metadata.undefinedValues && metadata.undefinedValues[reprAttribute]) {
+    else if (metadata.undefinedSymbols && metadata.undefinedSymbols[reprAttribute]) {
         undefinedClass = {
-            representation: metadata.undefinedValues[reprAttribute],
+            representation: metadata.undefinedSymbols[reprAttribute],
             'class': 'undefined',
             count: counter(null),
             objects: objects(null)
