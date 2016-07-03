@@ -29,7 +29,8 @@
     "visualization"
   ],
   "dependencies": {
-    "datadata": "0.1.8"
+    "datadata": "0.1.8",
+    "setimmediate": "^1.0.4"
   },
   "devDependencies": {
     "json2module": "0.0",
