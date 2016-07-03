@@ -1114,8 +1114,6 @@ mapmap.prototype.zOrder = function(comparator, options) {
     return this;
 };
 
-// TODO: right now, symbolize doesn't seem to be any different from applyBehavior!
-// either this should be unified, or the distinctions clearly worked out
 mapmap.prototype.symbolize = function(callback, selection, finalize) {
 
     var map = this;
@@ -1135,6 +1133,7 @@ mapmap.prototype.symbolize = function(callback, selection, finalize) {
 mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options) {
 
     options = dd.merge({
+        //metadata: null, // taken from map metadata
         metaAttribute: reprAttribute,
         selection: this.selected,
         legend: true
@@ -1150,10 +1149,17 @@ mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options)
     
     this.promise_data().then(function(data) {      
 
-        var metadata = map.getMetadata(property);
+        var metadata = options.metadata;
+        
+        if (dd.isString(metadata)) {
+            metadata = map.getMetadata(metadata);
+        }
+        if (!metadata) {
+            metadata = options.metadata || map.getMetadata(property);
+        }
 
         var scale = d3.scale[metadata.scale]();
-        scale.domain(metadata.domain).range(metadata[options.metaAttribute]);
+        scale.domain(metadata.domain).range(metadata[reprAttribute]);
 
         map.symbolize(function(el, geom, data) {
             el.attr(reprAttribute, function(geom) {
@@ -1174,10 +1180,21 @@ mapmap.prototype.symbolizeAttribute = function(property, reprAttribute, options)
     
 }
 
+// legacy method - this has moved to the mapmap.symbolize namespace
+mapmap.prototype.choropleth = function(spec, metadata, selection) {
+
+    this.symbolize(mapmap.symbolize.choropleth(spec, metadata, selection), selection, function(){
+        this.dispatcher.choropleth.call(this, spec);
+    });
+    
+    return this;
+}
+
+mapmap.symbolize = {};
 
 // TODO: improve handling of using a function here vs. using a named property
 // probably needs a unified mechanism to deal with property/func to be used elsewhere
-mapmap.prototype.choropleth = function(spec, metadata, selection) {    
+mapmap.symbolize.choropleth = function(spec, metadata, selection) {    
     // we have to remember the scale for legend()
     var colorScale = null,
         valueFunc = keyOrCallback(spec),
@@ -1217,117 +1234,25 @@ mapmap.prototype.choropleth = function(spec, metadata, selection) {
             return colorScale(val) || map.settings.pathAttributes.fill;
         });
     }
-    
-    this.symbolize(color, selection, function(){
-        this.dispatcher.choropleth.call(this, spec);
-    });
-        
-    return this;
+
+    return color;
 };
 
-// TODO: this should be easily implemented using symbolizeAttribute and removed
-mapmap.prototype.strokeColor = function(spec, metadata, selection) {    
-    // we have to remember the scale for legend()
-    var colorScale = null,
-        valueFunc = keyOrCallback(spec),
-        map = this;
-        
-    function color(el, geom, data) {
-        if (spec === null) {
-            // clear
-            el.attr('stroke', this.settings.pathAttributes.stroke);
-            return;
-        }
-        // on first call, set up scale & legend
-        if (!colorScale) {
-            // TODO: improve handling of things that need the data, but should be performed
-            // only once. Should we provide a separate callback for this, or use the 
-            // promise_data().then() for setup? As this could be considered a public API usecase,
-            // maybe using promises is a bit steep for outside users?
-            if (typeof metadata == 'string') {
-                metadata = this.getMetadata(metadata);
-            }
-            if (!metadata) {
-                metadata = this.getMetadata(spec);
-            }
-            colorScale = this.autoColorScale(spec, metadata, selection);
-            this.updateLegend(spec, 'strokeColor', metadata, colorScale, selection);
-        }
-        if (el.attr('stroke') != 'none') {
-            // transition if color already set
-            el = el.transition();
-        }
-        el.attr('stroke', function(geom) {           
-            var val = valueFunc(geom.properties);
-            // check if value is undefined or null
-            if (val == null || (metadata.scale != 'ordinal' && isNaN(val))) {
-                return metadata.undefinedColor || map.settings.pathAttributes.stroke;
-            }
-            return colorScale(val) || map.settings.pathAttributes.stroke;
-        });
-    }
-    
-    this.symbolize(color, selection);
-        
-    return this;
-};
-
-// TODO: should we even have this, or put viz. techniques in a separate project/namespace?
-mapmap.prototype.proportional_circles = function(value, scale) {
-    
-    var valueFunc = keyOrCallback(value);
-
-    var pathGenerator = d3.geo.path().projection(this._projection);    
-    
-    scale = scale || 20;
-    
-    this.symbolize(function(el, geom, data) {
-        if (value === null) {
-            this._elements.overlay.select('circle').remove();
-        }
-        else if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
-            // if scale is not set, calculate scale on first call
-            if (typeof scale != 'function') {
-                scale = this.autoSqrtScale(valueFunc).range([0,scale]);
-            }
-            var centroid = pathGenerator.centroid(geom);
-            this._elements.overlay.append('circle')
-                .attr(this.settings.overlayAttributes)
-                .attr({
-                    r: scale(valueFunc(geom.properties)),
-                    cx: centroid[0],
-                    cy: centroid[1]
-                });
-        }
-    });
-    return this;
-};
-
-mapmap.symbolize = {};
 
 mapmap.symbolize.addLabel = function(spec) {
 
     var valueFunc = keyOrCallback(spec);
         
-    var pathGenerator = d3.geo.path();    
-
     return function(el, geom, data) {
-        // lazy initialization of projection
-        // we dont't have access to the map above, and also projection
-        // may not have been initialized correctly
-        if (pathGenerator.projection() !== this._projection) {
-            pathGenerator.projection(this._projection);
-        }
 
-        // TODO: how to properly remove symbolizations?
         if (spec === null) {
-            this._elements.overlay.select('circle').remove();
+            this.getOverlayPane().select('text').remove();
             return;
         }
         
         if (geom.properties && typeof valueFunc(geom.properties) != 'undefined') {
-            var centroid = pathGenerator.centroid(geom);
-            this._elements.overlay.append('text')
+            var centroid = this.getPathGenerator().centroid(geom);
+            this.getOverlayPane().append('text')
                 .text(valueFunc(geom.properties))
                 .attr({
                     stroke: '#ffffff',
@@ -1346,6 +1271,7 @@ mapmap.symbolize.addLabel = function(spec) {
         }
     }
 }
+
 
 function addOptionalElement(elementName) {
     return function(value) {
