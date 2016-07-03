@@ -82,7 +82,7 @@ var mapmap = function(element, options) {
     
     this.metadata_specs = [];
 
-    // convert seletor expression to node
+    // convert selector expression to node
     element = d3.select(element).node();
  
     // defaults
@@ -119,10 +119,17 @@ mapmap.prototype.initEngine = function(element) {
     var mainEl = d3.select(element).classed('mapmap', true),
         mapEl = mainEl.append('g').attr('class', 'map');
     
+    var svg = mainEl.node();
+    while (svg.tagName != 'svg') {
+        svg = svg.parentNode;
+    }
+    svg = d3.select(svg);
+    
     mainEl.attr(this.settings.svgAttributes);
     
     this._elements = {
         main: mainEl,
+        svg: svg,
         map: mapEl,
         parent: d3.select(mainEl.node().parentNode),
         // child elements
@@ -1331,7 +1338,7 @@ mapmap.prototype.getAnchorForRepr = function(event, repr, options) {
     }, options);
     
     var bounds = repr.getBoundingClientRect();
-    var pt = this._elements.main.node().createSVGPoint();
+    var pt = this._elements.svg.node().createSVGPoint();
     
     pt.x = (bounds.left + bounds.right) / 2;
     pt.y = bounds.top;
@@ -1565,7 +1572,7 @@ mapmap.prototype.hoverInfo = function(spec, options) {
             // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement.offsetParent
             hoverEl.style(options.hoverEnterStyle);  
             
-            var offsetEl = hoverEl.node().offsetParent || hoverEl,
+            var offsetEl = hoverEl.node().offsetParent || hoverEl.node(),
                 mainEl = this._elements.main.node(),
                 bounds = this.getBoundingClientRect(),
                 offsetBounds = offsetEl.getBoundingClientRect(),
@@ -1946,7 +1953,7 @@ mapmap.prototype.zoomToCenter = function(center, scale, callback, duration) {
 
 mapmap.prototype.zoomToViewportPosition = function(center, scale, callback, duration) {
 
-    var point = this._elements.main.node().createSVGPoint();
+    var point = this._elements.svg.node().createSVGPoint();
 
     point.x = center[0];
     point.y = center[1];
