@@ -133,7 +133,6 @@ mapmap.prototype.initEngine = function(element) {
         geometry: mapEl.append('g').attr('class', 'geometry'),
         overlay: mapEl.append('g').attr('class', 'overlays'),
         fixed: mainEl.append('g').attr('class', 'fixed'),
-        legend: mainEl.append('g').attr('class', 'legend'),
         placeholder: mainEl.select('.' + this.settings.placeholderClassName)
     };
     
@@ -2512,128 +2511,19 @@ mapmap.legend.html = function(options) {
     return legend_func;
 }
 
-mapmap.legend.svg = function(range, labelFormat, histogram, options) {
-
-    var DEFAULTS = {
-        cellSpacing: 5,
-        layout: 'vertical',
-        histogram: false,
-        histogramLength: 80,
-        containerAttributes: {
-            transform: 'translate(20,10)'
-        },
-        backgroundAttributes: {
-            fill: '#fff',
-            'fill-opacity': 0.9,
-            x: -10,
-            y: -10,
-            width: 220
-        },
-        cellAttributes: {
-        },
-        colorAttributes: {
-            'width': 40,
-            'height': 18,
-            'stroke': '#000',
-            'stroke-width': '0.5px',
-            'fill': '#fff'  // this will be used before first transition
-        },
-        textAttributes: {
-            'font-size': 10,
-            'pointer-events': 'none',
-            dy: 12
-        },
-        histogramBarAttributes: {
-            width: 0,
-            x: 140,
-            y: 4,
-            height: 10,
-            fill: '#000',
-            'fill-opacity': 0.2
-        }
-    };
-
-    // TODO: we can't integrate thes into settings because it references settings attributes
-    var layouts = {
-        'horizontal': {
-            cellAttributes: {
-                transform: function(d,i){ return 'translate(' + i * (options.colorAttributes.width + options.cellSpacing) + ',0)';}
-            },
-            textAttributes: {
-                y: function() { return options.colorAttributes.height + options.cellSpacing;}
-                
-            }
-        },
-        'vertical': {
-            cellAttributes: {
-                transform: function(d,i){ return 'translate(0,' + i * (options.colorAttributes.height + options.cellSpacing) + ')';}
-            },
-            textAttributes: {
-                x: function() { return options.colorAttributes.width + options.cellSpacing;},
-            }
-        }
-    };
-
-    var layout = layouts[options.layout];
-    
-    if (options.layout == 'vertical') {
-        range.reverse();
-    }
-    
-    this._elements.legend.attr(options.containerAttributes);
- 
-    var bg = this._elements.legend.selectAll('rect.background')
-        .data([1]);
-    
-    bg.enter()
-        .append('rect')
-        .attr('class', 'background')
-        .attr(options.backgroundAttributes);
-    bg.transition().attr('height', histogram.length * (options.colorAttributes.height + options.cellSpacing) + (20 - options.cellSpacing));    
-        
-    var cells = this._elements.legend.selectAll('g.cell')
-        .data(range);
-    
-    cells.exit().remove();
-    
-    var newcells = cells.enter()
-        .append('g')
-        .attr('class', 'cell')
-        .attr(options.cellAttributes)
-        .attr(layout.cellAttributes);
-        
-    newcells.append('rect')
-        .attr('class', 'color')
-        .attr(options.colorAttributes)
-        .attr(layout.colorAttributes);
-                
-    if (options.histogram) {
-
-        newcells.append('rect')
-            .attr("class", "bar")
-            .attr(options.histogramBarAttributes);
-
-        cells.select('.bar').transition()
-            .attr("width", function(d,i){
-                return histogram[histogram.length-i-1].y * options.histogramLength;
-            });
-    }
-
-    newcells.append('text')
-        .attr(options.textAttributes)
-        .attr(layout.textAttributes);
-    
-    cells.select('.color').transition()
-        .attr('fill', function(d) {return d;});
-    
-    cells.select('text')
-        .text(labelFormat);
-}
-
 mapmap.prototype.projection = function(projection) {
     if (projection === undefined) return this._projection;
     this._projection = projection;
+    this._pathGenerator = d3.geo.path().projection(projection);
     return this;
+}
+
+mapmap.prototype.project = function(point) {
+    return this._projection(point);
+};
+
+mapmap.prototype.getPathGenerator = function() {
+    return this._pathGenerator;
 }
 
 mapmap.prototype.extent = function(selection, options) {
