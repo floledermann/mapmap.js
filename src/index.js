@@ -1444,7 +1444,6 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
         }
         if (outCB) {
             obj.on('mouseleave', function() {
-                console.log("resetting");
                 if (this.__hoverinsertposition__) {
                     this.parentNode.insertBefore(this, this.__hoverinsertposition__);
                 }
@@ -1459,7 +1458,6 @@ mapmap.prototype.hover = function(overCB, outCB, options) {
         }
         else {
             obj.on('mouseleave', function() {
-                console.log("resetting");
                 d3.select(this).attr('style', this._oldstyle || '');            
             });
         }          
