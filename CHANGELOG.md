@@ -2,18 +2,24 @@
 
 ## Trunk / Upcoming
 
+## 0.2.8
+
 ### New
 
-- New method `zOrder()` to determine ordering of SVG elements
+- New method `Map.symbolizeAttribute()` to assign any SVG attributes from data.
+- New method `Map.zOrder()` to determine ordering of SVG elements
 - Symbols in HTML legend are all SVG based now, for flexibility and consistency.
-- New method `symbolizeAttribute()` to assign any SVG attributes from data.
+- New attributes `reverse`(boolean) and `order` (function) in HTML legend options to control ordering of classes
+- Accessor functions for map panes (SVG (g)roup elements): `Map.getGeometryPane()`, `Map.getOverlayPane()`, `Map.getFixedPane()`.
+- Accessor function for path generator (d3.geo.path()): `Map.getPathGenerator()`
 
 ### Changes
 
-- `hoverInfo()` shows up only if there is text to be shown
-- `.projection()` now returns the projection if called without parameters
-- New option for `.geomtry()`: `setExtent` (default: `true`) to determine whether map extent should be set to geometrie's extent on load
-- `.geometry()` now also accepts single GeoJSON objects
+- `Map.choropleth()` is now deprecated - use `Map.symbolize(mapmap.symbolize.choropleth(…))` instead
+- `Map.hoverInfo()` shows up only if there is text to be shown
+- `Map.projection()` now returns the projection if called without parameters
+- New option for `Map.geomtry()`: `setExtent` (default: `true`) to determine whether map extent should be set to geometrie's extent on load
+- `Map.geometry()` now also accepts single GeoJSON objects
 
 ### Fixes
 
