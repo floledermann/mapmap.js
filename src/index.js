@@ -1239,7 +1239,19 @@ mapmap.symbolize.choropleth = function(spec, metadata, selection) {
 };
 
 
-mapmap.symbolize.addLabel = function(spec) {
+mapmap.symbolize.addLabel = function(spec, textAttributes) {
+    
+    textAttributes = dd.merge({
+        stroke: '#ffffff',
+        fill: '#000000',
+        'font-size': 9,
+        'paint-order': 'stroke fill',
+        'alignment-baseline': 'middle',
+        'text-anchor': 'middle',
+        dx: 0,
+        dy: 1
+    }, textAttributes);
+
 
     var valueFunc = keyOrCallback(spec);
         
@@ -1254,15 +1266,7 @@ mapmap.symbolize.addLabel = function(spec) {
             var centroid = this.getPathGenerator().centroid(geom);
             this.getOverlayPane().append('text')
                 .text(valueFunc(geom.properties))
-                .attr({
-                    stroke: '#ffffff',
-                    fill: '#000000',
-                    'font-size': 9,
-                    'paint-order': 'stroke fill',
-                    'alignment-baseline': 'middle',
-                    dx: 7,
-                    dy: 1
-                })
+                .attr(textAttributes)
                 .attr({                    
                     x: centroid[0],
                     y: centroid[1]
@@ -1272,24 +1276,23 @@ mapmap.symbolize.addLabel = function(spec) {
     }
 }
 
+mapmap.symbolize.addTitle = addOptionalElement('title');
+mapmap.symbolize.addDesc = addOptionalElement('desc');
 
 function addOptionalElement(elementName) {
     return function(value) {
         var valueFunc = keyOrCallback(value);
-        this.symbolize(function(el, d) {  
+        return function(el, d) {  
             if (value === null) {
                 el.select(elementName).remove();
                 return;
             }
             el.append(elementName)
                 .text(valueFunc(d.properties));
-        });
-        return this;
+        };
     };
 }
 
-mapmap.prototype.title = addOptionalElement('title');
-mapmap.prototype.desc = addOptionalElement('desc');
 
 var center = {
     x: 0.5,
