@@ -280,6 +280,18 @@ mapmap.prototype.initEngine = function(element) {
 
 };
 
+mapmap.prototype.getGeometryPane = function() {
+    return this._elements.geometry;
+}
+
+mapmap.prototype.getOverlayPane = function() {
+    return this._elements.overlay;
+}
+
+mapmap.prototype.getFixedPane = function() {
+    return this._elements.fixed;
+}
+
 mapmap.prototype.initEvents = function(element) {
     var map = this;
     // keep aspect ratio on resize
@@ -1737,7 +1749,7 @@ mapmap.behavior.zoom = function(options) {
         }
         
         if (options.showRing && !ring) {
-            ring = map._elements.fixed.selectAll('g.zoomRing')
+            ring = map.getFixedPane().selectAll('g.zoomRing')
                 .data([1]);
             
             var newring = ring.enter()
