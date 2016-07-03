@@ -86,7 +86,7 @@ var mapmap = function(element, options) {
     element = d3.select(element).node();
  
     // defaults
-    this._projection = d3.geo.mercator().scale(1);
+    this.projection(d3.geo.mercator().scale(1));
     
     this.initEngine(element);
     this.initEvents(element);
@@ -578,8 +578,6 @@ mapmap.prototype.draw = function() {
     
     var map = this;
     
-    var pathGenerator = d3.geo.path().projection(this._projection);
-
     if (this._elements.placeholder) {
         this._elements.placeholder.remove();
         this._elements.placeholder = null;
@@ -600,7 +598,7 @@ mapmap.prototype.draw = function() {
             geomSel
                 .enter()
                 .append('path')
-                .attr('d', pathGenerator)
+                .attr('d', map.getPathGenerator())
                 .attr(map.settings.pathAttributes)
                 .each(function(d) {
                     // link data object to its representation
@@ -784,15 +782,6 @@ mapmap.prototype.getData = function(key, selection) {
         });
     });
 };
-
-mapmap.prototype.getOverlayContext = function() {
-    return this._elements.overlay;
-};
-
-mapmap.prototype.project = function(point) {
-    return this._projection(point);
-};
-
 
 mapmap.prototype.promise_data = function(promise) {
     // chain a new promise to the data promise
@@ -1969,7 +1958,7 @@ mapmap.prototype.zoomToSelection = function(selection, options) {
 
     var sel = this.getRepresentations(selection),
         bounds = [[Infinity,Infinity],[-Infinity, -Infinity]],
-        pathGenerator = d3.geo.path().projection(this._projection);    
+        pathGenerator = this.getPathGenerator();
     
     sel.each(function(el){
         var b = pathGenerator.bounds(el);
@@ -2588,7 +2577,7 @@ mapmap.prototype._extent = function(geom, options) {
     
     // reset scale to be able to calculate extents of geometry
     this._projection.scale(1).translate([0, 0]);
-    var pathGenerator = d3.geo.path().projection(this._projection);
+    var pathGenerator = this.getPathGenerator();
     var bounds = pathGenerator.bounds(geom);
     // use absolute values, as east does not always have to be right of west!
     bounds.height = Math.abs(bounds[1][1] - bounds[0][1]);
