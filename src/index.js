@@ -1,4 +1,4 @@
-/*! mapmap.js __VERSION__ © 2014-2015 Florian Ledermann 
+/*! mapmap.js __VERSION__ © Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
