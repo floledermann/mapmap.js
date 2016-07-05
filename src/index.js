@@ -257,7 +257,9 @@ mapmap.prototype.initEngine = function(element) {
     function constructEvent(event) {
         // TODO: maybe this should be offsetX/Y, but then we need to change
         // zoomToViewportPosition to support click-to-zoom
-        var pos = [event.clientX, event.clientY]
+        var pos = [event.clientX, event.clientY],
+            location = map._projection.invert ? map._projection.invert(pos) : null;
+            
         return {
             position: pos,
             location: map._projection.invert(pos),
