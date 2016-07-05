@@ -645,7 +645,7 @@ module.exports = dd;
 },{"d3-dsv":2,"fs":2}],2:[function(require,module,exports){
 
 },{}],3:[function(require,module,exports){
-/*! mapmap.js 0.2.8-dev.0 © Florian Ledermann 
+/*! mapmap.js 0.2.8 © Florian Ledermann 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
@@ -663,7 +663,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 var dd = require('datadata');
 
-var version = '0.2.8-dev.0';
+var version = '0.2.8';
 
 function assert(test, message) { if (test) return; throw new Error("[mapmap] " + message);}
 assert(window.d3, "d3.js is required!");
