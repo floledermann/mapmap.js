@@ -506,10 +506,11 @@ var identify_by_properties = function(properties){
         properties = [properties];
     }
     return function(layers, name){
-        name = name.toString().toLowerCase();
+        name = name.toString();
         // layers have priority, so iterate them first
         var lyr = layers.get(name);
         if (lyr) return lyr;
+        name = name.toLowerCase(); // TODO: make option "ignoreCase"?
         var result = [];
         // properties are ordered by relevance, so iterate these first
         for (var k=0; k<properties.length; k++) {
@@ -530,7 +531,6 @@ var identify_by_properties = function(properties){
 };
 
 var identify_layer = function(layers, name) {
-    name = name.toLowerCase();
     return layers.get(name);
 };
 
