@@ -168,7 +168,7 @@ var map = mapmap('#mapEl')
 ### Optional dependencies
 
 For processing [TopoJSON](https://github.com/mbostock/topojson) geometry, you need to 
-include the TopoJSON library from [here](https://github.com/mbostock/topojson/blob/master/topojson.js). 
+include the TopoJSON library from [here](https://unpkg.com/topojson@3). 
 
 ### License
 
